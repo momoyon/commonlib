@@ -4,8 +4,12 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <windows.h>
 
 // typedefs
+typedef unsigned int uint;
 typedef uint8_t  uint8;
 typedef uint16_t uint16;
 typedef uint32_t uint32;
@@ -16,14 +20,33 @@ typedef int16_t int16;
 typedef int32_t int32;
 typedef int64_t int64;
 
-typedef float  real32;
-typedef double real64;
+typedef float  float32;
+typedef double float64;
 
 typedef const char* cstr;
 
-#define ASSERT(condition) if (!(condition)) fprintf(stderr, "%s:%d:0: Assertion failed: %s\n", __FILE__, __LINE__, #condition); exit(1)
+#define ASSERT(condition) if (!(condition)) panic_assertion(#condition, stderr, __FILE__, __LINE__)
 
 #define ARRAY_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
+
+void panic_assertion(cstr msg, FILE* file, cstr filename, int line);
+
+#define TEMP_BUFF_SIZE (1024*4)
+static char tempbuff[TEMP_BUFF_SIZE];
+
+#define temp_sprintf(var, fmt, ...) \
+  snprintf(tempbuff, TEMP_BUFF_SIZE, fmt, __VA_ARGS__);	\
+  (var) = tempbuff
+
+// Winapi
+#define WINAPI_ERROR_MSG_BUFF_SIZE 1024
+static char winapi_error_msg_buff[WINAPI_ERROR_MSG_BUFF_SIZE];
+#define WINAPI_OUTPUT_STR_BUFF_SIZE (16*1024)
+static CHAR_INFO winapi_output_str_buff[WINAPI_OUTPUT_STR_BUFF_SIZE];
+
+bool output_str(cstr text);
+bool output_strn(cstr text, size_t text_len);
+cstr winapi_get_last_error_str(void);
 
 // FLUSH_ON_LOG - define this macro to fflush() on every call to log() not defined by default.
 
@@ -35,12 +58,36 @@ typedef enum {
   LOG_COUNT,
 } Log_type;
 
-void log_f(Log_type type, const char* fmt, ...);
+void log_file(Log_type type, FILE* file, cstr fmt, ...);
+#define log_f(type, fmt, ...)  log_file(type, stdout, fmt, __VA_ARGS__)
+#define log_info(fmt, ...)     log_f(LOG_INFO, fmt, __VA_ARGS__)
+#define log_error(fmt, ...)    log_f(LOG_ERROR, fmt, __VA_ARGS__)
+#define log_warning(fmt, ...)  log_f(LOG_WARNING, fmt, __VA_ARGS__)
 
-// file
+// File
 
 // reads entire file and gives back the string holding the contents. (caller must be responsible for freeing the string!)
 const char* slurp_file(const char* filename);
+
+//
+// ### Allocators ###
+//
+
+// Arena
+
+typedef struct Arena Arena;
+
+#define ARENA_BUFF_INITIAL_SIZE (1024*4)
+
+struct Arena {
+  void* buff;
+  size_t buff_size;
+  void* ptr;
+};
+
+Arena Arena_make(void);
+void* Arena_alloc(Arena* a, size_t size);
+void Arena_free(Arena* a);
 
 //
 // String view
@@ -48,22 +95,23 @@ const char* slurp_file(const char* filename);
 
 typedef struct {
   cstr data;
-  int32 count;
+  size_t count;
 } String_view;
 
 #define SV_FMT "%.*s"
-#define SV_ARG(sv) sv.count, sv.data
+#define SV_ARG(sv) (int)sv.count, sv.data
 
 #define SV(cstr) (String_view){.data = cstr, strlen(cstr)}
 
 void sv_print_dumb(String_view sv);
-String_view sv_from_cstr(const char* cstr);
+String_view sv_from_cstr(const char* cstr); // Actually just use SV(cstr) macro...
+String_view sv_lpop(String_view* sv, uint32 n);
 String_view sv_lpop_until_predicate(String_view* sv, int(*predicate)(int));
 String_view sv_rpop_until_predicate(String_view* sv, int(*predicate)(int));
 String_view sv_lpop_until_char(String_view* sv, char ch);
 String_view sv_rpop_until_char(String_view* sv, char ch);
-void sv_lremove(String_view* sv, int n);
-void sv_rremove(String_view* sv, int n);
+void sv_lremove(String_view* sv, size_t n);
+void sv_rremove(String_view* sv, size_t n);
 void sv_lremove_until_char(String_view* sv, char ch);
 void sv_rremove_until_char(String_view* sv, char ch);
 void sv_lremove_until_char_after(String_view* sv, char ch);
@@ -72,9 +120,14 @@ void sv_ltrim(String_view* sv);
 void sv_rtrim(String_view* sv);
 void sv_trim(String_view* sv);
 char* sv_to_cstr(String_view sv);
-int32   sv_to_int(String_view sv);
-real32 sv_to_float(String_view sv);
+int32  sv_to_int(String_view sv);
+uint64 sv_to_uint64(String_view sv);
+uint8 sv_to_uint8_hex(String_view sv);
+void*  sv_to_ptr(String_view sv);
+float32 sv_to_float(String_view sv);
 bool sv_contains_char(String_view sv, char ch);
+bool sv_is_hex_numbers(String_view sv);
+bool sv_equals(String_view sv1, String_view sv2);
 
 #endif /* _STDLIB_H_ */
 
@@ -84,14 +137,138 @@ bool sv_contains_char(String_view sv, char ch);
 #include <errno.h>
 #include <stdlib.h>
 
-void log_f(Log_type type, const char* fmt, ...){
+// Winapi
+cstr winapi_get_last_error_str(void) {
+  DWORD error_code = GetLastError();
+  if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, error_code, 0, winapi_error_msg_buff, WINAPI_ERROR_MSG_BUFF_SIZE, NULL)){
+    log_f(LOG_ERROR, "FormatMessage() failed with code: %d", GetLastError());
+    return NULL;
+  }
+  return winapi_error_msg_buff;
+}
+
+bool output_str(cstr text) {
+  return output_strn(text, strlen(text));
+}
+
+bool output_strn(cstr text, size_t text_len) {
+  SECURITY_ATTRIBUTES sa = {0};
+  sa.nLength = sizeof(sa);
+  sa.bInheritHandle = TRUE;
+
+  HANDLE console = CreateFileA("CONOUT$",
+			       GENERIC_READ|GENERIC_WRITE,
+			       FILE_SHARE_WRITE,
+			       &sa,
+			       OPEN_EXISTING,
+			       0,
+			       NULL);
+
+  if (console == INVALID_HANDLE_VALUE) {
+    log_f(LOG_INFO, "Could not get a handle to the active console screen buffer: %s", winapi_get_last_error_str());
+    return 1;
+  }
+
+  if (text_len == 0) return false;
+
+  ASSERT(text_len < WINAPI_OUTPUT_STR_BUFF_SIZE);
+  CHAR_INFO* buff = winapi_output_str_buff;
+
+  CONSOLE_SCREEN_BUFFER_INFO csbi = {0};
+
+  if (!GetConsoleScreenBufferInfo(console, &csbi)) {
+    log_f(LOG_ERROR, "Could not get console screen buffer info: %s", winapi_get_last_error_str());
+    return false;
+  }
+
+  COORD buff_size = {0, 1};
+  COORD new_cursor = {
+    .X = csbi.dwCursorPosition.X,
+    .Y = csbi.dwCursorPosition.Y
+  };
+
+  bool overflown = false;
+
+  char* next_text = NULL;
+
+  for (size_t i = 0; i < text_len; ++i) {
+    if (text[i] == '\n') {
+      overflown = true;
+      next_text = (char*)text+buff_size.X+1;
+      text_len = (text+text_len)-text;
+      break;
+    } else {
+      buff[i].Char.AsciiChar = text[i];
+      buff_size.X++;
+      new_cursor.X++;
+      if (new_cursor.X >= csbi.dwMaximumWindowSize.X) {
+	overflown = true;
+	next_text = (char*)text+buff_size.X;
+	text_len = (text+text_len)-text;
+	break;
+      }
+    }
+
+    buff[i].Attributes = FOREGROUND_RED|FOREGROUND_INTENSITY;
+  }
+
+  COORD write_coord = {0, 0};
+  SMALL_RECT rect = {
+    .Left   = csbi.dwCursorPosition.X,
+    .Top    = csbi.dwCursorPosition.Y,
+    .Right  = new_cursor.X,
+    .Bottom = new_cursor.Y,
+  };
+
+  if(!WriteConsoleOutput(console,
+			 buff,
+			 buff_size,
+			 write_coord,
+			 &rect)) {
+    log_f(LOG_ERROR, "[1] Could not write to console output: [%d] %s", GetLastError(), winapi_get_last_error_str());
+    return false;
+  }
+
+  if (!overflown) {
+    // advance cursor
+    if (!SetConsoleCursorPosition(console, new_cursor)) {
+      log_f(LOG_ERROR, "[1] Could not set new cursor pos: %s", winapi_get_last_error_str());
+      return false;
+    }
+  }
+
+  if (overflown) {
+    new_cursor.X = 0;
+    new_cursor.Y++;
+    // advance cursor
+    if (!SetConsoleCursorPosition(console, new_cursor)) {
+      log_f(LOG_ERROR, "[2] Could not set new cursor pos: %s", winapi_get_last_error_str());
+      return false;
+    }
+    output_strn(next_text, text_len);
+  }
+
+  return true;
+}
+
+void panic_assertion(cstr msg, FILE* file, cstr filename, int line) {
+  fprintf(file, "%s:%d:0: ASSERTION FAILED: %s\n", filename, line, msg);
+  exit(1);
+}
+
+void log_file(Log_type type, FILE* file, cstr fmt, ...) {
   va_list args;
   va_start(args, fmt);
 
+  SYSTEMTIME sys_time = {0};
+  GetLocalTime(&sys_time);
+
+  fprintf(file, "[%02d:%02d:%02d] ", sys_time.wHour, sys_time.wMinute, sys_time.wSecond);
+
   switch (type){
-  case LOG_INFO: printf("INFO: "); break;
-  case LOG_ERROR: printf("ERROR: "); break;
-  case LOG_WARNING: printf("WARNING: "); break;
+  case LOG_INFO: fprintf(file, "INFO: "); break;
+  case LOG_ERROR: fprintf(file, "ERROR: "); break;
+  case LOG_WARNING: fprintf(file, "WARNING: "); break;
   default: ASSERT(0 && "Unreachable");
   }
 
@@ -101,47 +278,47 @@ void log_f(Log_type type, const char* fmt, ...){
       switch (*fmt){
       case 's': {
 	const char* str = va_arg(args, const char*);
-	printf("%s", str);
+	fprintf(file, "%s", str);
       } break;
       case 'i':
       case 'd': {
         int i = va_arg(args, int);
-	printf("%d", i);
+	fprintf(file, "%d", i);
       } break;
       case 'o': {
 	int i = va_arg(args, int);
-	printf("%o", i);
+	fprintf(file, "%o", i);
       } break;
       case 'u': {
 	unsigned int i = va_arg(args, unsigned int);
-	printf("%u", i);
+	fprintf(file, "%u", i);
       } break;
       case 'f':
       case 'F': {
 	double i = va_arg(args, double);
-	printf("%f", i);
+	fprintf(file, "%f", i);
       } break;
       case 'p': {
         void* i = va_arg(args, void*);
-	printf("%p", i);
+	fprintf(file, "%p", i);
       } break;
       case '%': {
-	printf("%%");
+	fprintf(file, "%%");
       }
       case 'c':{
         char i = va_arg(args, char);
-	printf("%c", i);
+	fprintf(file, "%c", i);
       }
       }
     } else {
-      putc(*fmt, stdout);
+      fputc(*fmt, file);
     }
     fmt++;
   }
 
-  putc('\n', stdout);
+  fputc('\n', file);
 #ifdef FLUSH_ON_LOG
-  fflush(stdout);
+  fflush(file);
 #endif
   va_end(args);
 }
@@ -202,6 +379,39 @@ const char* slurp_file(const char* filename) {
 
 
 //
+// ### Allocators ###
+//
+
+// Arena
+
+Arena Arena_make(void) {
+  Arena res = {0};
+  res.buff_size = ARENA_BUFF_INITIAL_SIZE;
+  res.buff = malloc(res.buff_size);
+  res.ptr = res.buff;
+
+  ASSERT(res.buff);
+
+  return res;
+}
+
+void* Arena_alloc(Arena* a, size_t size) {
+  ASSERT(a->buff);
+
+  void* res = a->ptr;
+  a->ptr = (uint8*)a->ptr + size;
+
+  // TODO: realloc buff with greater buff_size
+  ASSERT((size_t)((uint8*)a->ptr - (uint8*)a->buff) < a->buff_size);
+
+  return res;
+}
+
+void Arena_free(Arena* a) {
+  free(a->buff);
+}
+
+//
 // String view
 //
 
@@ -218,6 +428,18 @@ String_view sv_from_cstr(const char* cstr){
   };
 }
 
+String_view sv_lpop(String_view* sv, uint32 n) {
+  String_view res = {0};
+  if (sv->count < n) return res;
+  res.data = sv->data;
+  res.count = n;
+
+  sv->data += n;
+  sv->count -= n;
+
+  return res;
+}
+
 String_view sv_lpop_until_predicate(String_view* sv, int(*predicate)(int)){
   const char* old_sv_data = sv->data;
   while (sv->count > 0 && !predicate(*sv->data)){
@@ -232,7 +454,7 @@ String_view sv_lpop_until_predicate(String_view* sv, int(*predicate)(int)){
 }
 
 String_view sv_rpop_until_predicate(String_view* sv, int(*predicate)(int)){
-  int old_sv_count = sv->count;
+  size_t old_sv_count = sv->count;
   while (sv->count > 0 && !predicate(*(sv->data+sv->count-1))){
     sv->count--;
   }
@@ -257,7 +479,7 @@ String_view sv_lpop_until_char(String_view* sv, char ch){
 }
 
 String_view sv_rpop_until_char(String_view* sv, char ch){
-  int old_sv_count = sv->count;
+  size_t old_sv_count = sv->count;
   while (sv->count > 0 && *(sv->data+sv->count-1) != ch){
     sv->count--;
   }
@@ -268,14 +490,14 @@ String_view sv_rpop_until_char(String_view* sv, char ch){
   };
 }
 
-void sv_lremove(String_view* sv, int n){
+void sv_lremove(String_view* sv, size_t n){
   if (n > sv->count) n = sv->count;
 
   sv->data += n;
   sv->count -= n;
 }
 
-void sv_rremove(String_view* sv, int n){
+void sv_rremove(String_view* sv, size_t n){
   if (n > sv->count)
     sv->count = 0;
   else
@@ -332,6 +554,7 @@ char* sv_to_cstr(String_view sv){
   return res;
 }
 
+// TODO: check for failure of conversion. returns 0/0.0 on failure, so just check if the str contains zero.
 int32 sv_to_int(String_view sv) {
   char* str = sv_to_cstr(sv);
   int32 res = atoi(str);
@@ -339,9 +562,32 @@ int32 sv_to_int(String_view sv) {
   return res;
 }
 
-real32 sv_to_float(String_view sv) {
+uint64 sv_to_uint64(String_view sv) {
   char* str = sv_to_cstr(sv);
-  real32 res = atof(str);
+  uint64 res = (uint64)atoll(str);
+  free(str);
+  return res;
+}
+
+uint8 sv_to_uint8_hex(String_view sv) {
+  char* str = sv_to_cstr(sv);
+  char* end = str + sv.count;
+  uint8 res = (uint8)strtol(str, &end, 16);
+  free(str);
+  return res;
+}
+
+float32 sv_to_float(String_view sv) {
+  char* str = sv_to_cstr(sv);
+  float32 res = (float32)atof(str);
+  free(str);
+  return res;
+}
+
+void*  sv_to_ptr(String_view sv) {
+  char* str = sv_to_cstr(sv);
+  char* end = NULL;
+  void* res = (void*)strtoull(str, &end, 16);
   free(str);
   return res;
 }
@@ -351,6 +597,36 @@ bool sv_contains_char(String_view sv, char ch){
     if (sv.data[i] == ch) return true;
   }
   return false;
+}
+
+bool sv_is_hex_numbers(String_view sv) {
+  char hex[] = {
+    '0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', '0', 'a', 'b', 'c', 'd', 'e', 'f',
+    'A', 'B', 'C', 'D', 'E', 'F'
+  };
+  bool found = false;
+  for (size_t i = 0; i < sv.count; ++i) {
+    char c = sv.data[i];
+    for (size_t j = 0; j < ARRAY_LEN(hex); ++j) {
+      if (hex[j] == c) {
+	found = true;
+      }
+    }
+  }
+
+  return found;
+}
+
+bool sv_equals(String_view sv1, String_view sv2) {
+  if (sv1.count != sv2.count) return false;
+  for (size_t i = 0; i < sv1.count; ++i) {
+    if (sv1.data[i] != sv2.data[i]) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 #endif
