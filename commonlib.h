@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <windows.h>
+#include <locale.h>
 
 // typedefs
 typedef unsigned int uint;
@@ -23,11 +24,21 @@ typedef int64_t int64;
 typedef float  float32;
 typedef double float64;
 
-typedef const char* cstr;
+typedef wchar_t wchar;
+
+typedef const char*  cstr;
+typedef const wchar* wstr;
 
 #define ASSERT(condition) if (!(condition)) panic_assertion(#condition, stderr, __FILE__, __LINE__)
 
 #define ARRAY_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
+
+#define STRUCT(name) typedef struct name name
+#define ENUM(name)   typedef enum name name
+
+// Struct pre-decls
+
+STRUCT(Arena);
 
 void panic_assertion(cstr msg, FILE* file, cstr filename, int line);
 
@@ -38,7 +49,10 @@ static char tempbuff[TEMP_BUFF_SIZE];
   snprintf(tempbuff, TEMP_BUFF_SIZE, fmt, __VA_ARGS__);	\
   (var) = tempbuff
 
+//
 // Winapi
+//
+
 #define WINAPI_ERROR_MSG_BUFF_SIZE 1024
 static char winapi_error_msg_buff[WINAPI_ERROR_MSG_BUFF_SIZE];
 #define WINAPI_OUTPUT_STR_BUFF_SIZE (16*1024)
@@ -47,10 +61,14 @@ static CHAR_INFO winapi_output_str_buff[WINAPI_OUTPUT_STR_BUFF_SIZE];
 bool output_str(cstr text);
 bool output_strn(cstr text, size_t text_len);
 cstr winapi_get_last_error_str(void);
+cstr winapi_get_current_working_directory(Arena* arena);
+
+//
+// logging
+//
 
 // FLUSH_ON_LOG - define this macro to fflush() on every call to log() not defined by default.
 
-// logging
 typedef enum {
   LOG_INFO = 0,
   LOG_ERROR,
@@ -64,7 +82,9 @@ void log_file(Log_type type, FILE* file, cstr fmt, ...);
 #define log_error(fmt, ...)    log_f(LOG_ERROR, fmt, __VA_ARGS__)
 #define log_warning(fmt, ...)  log_f(LOG_WARNING, fmt, __VA_ARGS__)
 
+//
 // File
+//
 
 // reads entire file and gives back the string holding the contents. (caller must be responsible for freeing the string!)
 const char* slurp_file(const char* filename);
@@ -73,21 +93,32 @@ const char* slurp_file(const char* filename);
 // ### Allocators ###
 //
 
+//
 // Arena
-
-typedef struct Arena Arena;
+//
 
 #define ARENA_BUFF_INITIAL_SIZE (1024*4)
 
 struct Arena {
   void* buff;
-  size_t buff_size;
+  uint64 buff_size;
   void* ptr;
 };
 
-Arena Arena_make(void);
+// pass size 0 to get ARENA_BUFF_INITIAL_SIZE
+Arena Arena_make(size_t size);
 void* Arena_alloc(Arena* a, size_t size);
+void Arena_reset(Arena* a);
 void Arena_free(Arena* a);
+
+#define Arena_alloc_str(a, fmt, ...)  Arena_alloc(&(a), sizeof(char)*snprintf((a).ptr, (a).buff_size - ((uint8*)(a).ptr - (uint8*)(a).buff), (fmt), __VA_ARGS__)+1)
+#define Arena_alloc_wstr(a, fmt, ...) Arena_alloc(&a, sizeof(char)*wprintf(a.ptr, a.buff_size - ((uint8*)a.ptr - (uint8*)a.buff), (fmt), __VA_ARGS__)+1)
+
+//
+// String
+//
+
+bool cstr_to_wstr(Arena* warena, cstr str);
 
 //
 // String view
@@ -129,6 +160,12 @@ bool sv_contains_char(String_view sv, char ch);
 bool sv_is_hex_numbers(String_view sv);
 bool sv_equals(String_view sv1, String_view sv2);
 
+//
+// Args
+//
+
+cstr shift_args(int* argc, char*** argv);
+
 #endif /* _STDLIB_H_ */
 
 //////////////////////////////////////////////////
@@ -145,6 +182,20 @@ cstr winapi_get_last_error_str(void) {
     return NULL;
   }
   return winapi_error_msg_buff;
+}
+
+cstr winapi_get_current_working_directory(Arena* arena) {
+  if (arena->buff_size < MAX_PATH) {
+    log_error("Arena size should be at least of size MAX_PATH(%u)", MAX_PATH);
+    return NULL;
+  }
+
+  size_t n = GetCurrentDirectoryA((DWORD)arena->buff_size, arena->buff);
+  if (n == 0) {
+    log_error("%s -> %s", __func__, winapi_get_last_error_str());
+    return NULL;
+  }
+  return arena->buff;
 }
 
 bool output_str(cstr text) {
@@ -384,9 +435,9 @@ const char* slurp_file(const char* filename) {
 
 // Arena
 
-Arena Arena_make(void) {
+Arena Arena_make(size_t size) {
   Arena res = {0};
-  res.buff_size = ARENA_BUFF_INITIAL_SIZE;
+  res.buff_size = size == 0 ? ARENA_BUFF_INITIAL_SIZE : size;
   res.buff = malloc(res.buff_size);
   res.ptr = res.buff;
 
@@ -402,13 +453,51 @@ void* Arena_alloc(Arena* a, size_t size) {
   a->ptr = (uint8*)a->ptr + size;
 
   // TODO: realloc buff with greater buff_size
-  ASSERT((size_t)((uint8*)a->ptr - (uint8*)a->buff) < a->buff_size);
+  size_t diff = (size_t)((uint8*)a->ptr - (uint8*)a->buff);
+  if (diff > a->buff_size) {
+    log_info("Arena resized from %u to %u", a->buff_size, a->buff_size*2);
+    a->buff_size *= 2;
+    a->buff = realloc(a->buff, a->buff_size);
+    a->ptr = (uint8*)a->buff + diff;
+    res = a->ptr;
+    a->ptr = (uint8*)a->ptr + size;
+  }
+  /* ASSERT((size_t)((uint8*)a->ptr - (uint8*)a->buff) <= a->buff_size); */
 
   return res;
 }
 
+void Arena_reset(Arena* a) {
+  a->ptr = a->buff;
+}
+
 void Arena_free(Arena* a) {
   free(a->buff);
+}
+
+//
+// String
+//
+
+bool cstr_to_wstr(Arena* warena, cstr str) {
+  if (warena->buff_size <= 0) {
+    log_error("Arena size is 0!!!");
+    return false;
+  }
+
+  size_t count = strlen(str)+1;
+  size_t ret = mbstowcs((wchar*)warena->buff,
+		  str,
+		  count);
+
+  if (ret == -1) {
+    log_error("Encountered an invalid multibyte character!");
+    return false;
+  } else if (ret == count) {
+    log_error("The wide-character string isn't null-terminated!");
+    return false;
+  }
+  return true;
 }
 
 //
@@ -627,6 +716,20 @@ bool sv_equals(String_view sv1, String_view sv2) {
   }
 
   return true;
+}
+
+
+//
+// Args
+//
+
+cstr shift_args(int* argc, char*** argv) {
+  if (*argc <= 0) return NULL;
+
+  cstr res = *(argv)[0];
+  *argv = (*argv) + 1;
+  *argc = (*argc) - 1;
+  return res;
 }
 
 #endif
