@@ -5,15 +5,18 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
+#ifdef _WIN32
 #include <windows.h>
+#endif
 #include <locale.h>
 
 //
 // External libs --------------------------------------------------
 //
 
-// stb_ds.h:
+// >> stb_ds.h >>
 
 /* stb_ds.h - v0.67 - public domain data structures - Sean Barrett 2019
 
@@ -739,8 +742,9 @@ template<class T> static T * stbds_shmode_func_wrapper(T *, size_t elemsize, int
 #endif
 
 #endif // INCLUDE_STB_DS_H
+// << fold <<
 
-// stb_sprintf.h:
+// >> stb_sprintf.h >>
 
 // stb_sprintf - v1.10 - public domain snprintf() implementation
 // originally by Jeff Roberts / RAD Game Tools, 2015/10/20
@@ -958,6 +962,7 @@ STBSP__PUBLICDEC int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
 STBSP__PUBLICDEC void STB_SPRINTF_DECORATE(set_separators)(char comma, char period);
 
 #endif // STB_SPRINTF_H_INCLUDE
+// << fold <<
 
 // ----------------------------------------------------------------
 
@@ -987,6 +992,7 @@ typedef const wchar* wstr;
 
 #define STRUCT(name) typedef struct name name
 #define ENUM(name)   typedef enum name name
+#define DYNAMIC_ARRAY(type, name) type* name = NULL
 
 // Struct pre-decls
 
@@ -994,17 +1000,16 @@ STRUCT(Arena);
 
 void panic_assertion(cstr msg, FILE* file, cstr filename, int line);
 
-#define TEMP_BUFF_SIZE (1024*4)
-static char tempbuff[TEMP_BUFF_SIZE];
+//
+// OS
+//
 
-#define temp_sprintf(var, fmt, ...) \
-  stbsp_snprintf(tempbuff, TEMP_BUFF_SIZE, fmt, __VA_ARGS__);	\
-  (var) = tempbuff
+void os_get_timedate(Arena* a);
 
 //
 // Winapi
 //
-
+#ifdef _WIN32
 #define WINAPI_ERROR_MSG_BUFF_SIZE 1024
 static char winapi_error_msg_buff[WINAPI_ERROR_MSG_BUFF_SIZE];
 #define WINAPI_OUTPUT_STR_BUFF_SIZE (16*1024)
@@ -1014,7 +1019,7 @@ bool output_str(cstr text);
 bool output_strn(cstr text, size_t text_len);
 cstr winapi_get_last_error_str(void);
 cstr winapi_get_current_working_directory(Arena* arena);
-
+#endif
 //
 // logging
 //
@@ -1022,17 +1027,17 @@ cstr winapi_get_current_working_directory(Arena* arena);
 // FLUSH_ON_LOG - define this macro to fflush() on every call to log() not defined by default.
 
 typedef enum {
-  LOG_INFO = 0,
-  LOG_ERROR,
-  LOG_WARNING,
-  LOG_COUNT,
+  C_LOG_INFO = 0,
+  C_LOG_ERROR,
+  C_LOG_WARNING,
+  C_LOG_COUNT,
 } Log_type;
 
 void log_file(Log_type type, FILE* file, cstr fmt, ...);
-#define log_f(type, fmt, ...)  log_file(type, stdout, fmt, __VA_ARGS__)
-#define log_info(fmt, ...)     log_f(LOG_INFO, fmt, __VA_ARGS__)
-#define log_error(fmt, ...)    log_f(LOG_ERROR, fmt, __VA_ARGS__)
-#define log_warning(fmt, ...)  log_f(LOG_WARNING, fmt, __VA_ARGS__)
+#define log_f(type, fmt, ...)  log_file(type, stdout, fmt, ##__VA_ARGS__)
+#define log_info(fmt, ...)     log_f(C_LOG_INFO, fmt, ##__VA_ARGS__)
+#define log_error(fmt, ...)    log_f(C_LOG_ERROR, fmt, ##__VA_ARGS__)
+#define log_warning(fmt, ...)  log_f(C_LOG_WARNING, fmt, ##__VA_ARGS__)
 
 //
 // File
@@ -1130,7 +1135,7 @@ cstr shift_args(int* argc, char*** argv);
 // External libs --------------------------------------------------
 //
 
-// stb_ds.h:
+// >> stb_ds.h >>
 
 #define STB_DS_IMPLEMENTATION
 #ifdef STB_DS_IMPLEMENTATION
@@ -2297,8 +2302,9 @@ ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
 */
+// << fold <<
 
-// stb_sprintf.h:
+// >> stb_sprintf.h >>
 
 #define STB_SPRINTF_IMPLEMENTATION
 #ifdef STB_SPRINTF_IMPLEMENTATION
@@ -2677,7 +2683,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             s = (char *)"null";
          // get the length, limited to desired precision
          // always limit to ~0u chars since our counts are 32b
-         l = stbsp__strlen_limited(s, (pr >= 0) ? pr : ~0u);
+         l = stbsp__strlen_limited(s, (pr >= 0) ? (unsigned int)pr : ~0u);
          lead[0] = 0;
          tail[0] = 0;
          pr = 0;
@@ -3990,16 +3996,34 @@ ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
 */
+// << fold <<
 
 // ----------------------------------------------------------------------------------------------------
 
 // My things implementation:
 
+//
+// OS
+//
+
+#ifdef _WIN32
+void os_get_timedate(Arena* a) {
+    (void)a;
+}
+#endif // _WIN32
+#ifdef linux
+void os_get_timedate(Arena* a) {
+    (void)a;
+}
+#endif // linux
+
+
+#ifdef _WIN32
 // Winapi
 cstr winapi_get_last_error_str(void) {
   DWORD error_code = GetLastError();
   if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, error_code, 0, winapi_error_msg_buff, WINAPI_ERROR_MSG_BUFF_SIZE, NULL)){
-    log_f(LOG_ERROR, "FormatMessage() failed with code: %d", GetLastError());
+    log_f(C_LOG_ERROR, "FormatMessage() failed with code: %d", GetLastError());
     return NULL;
   }
   return winapi_error_msg_buff;
@@ -4037,7 +4061,7 @@ bool output_strn(cstr text, size_t text_len) {
 			       NULL);
 
   if (console == INVALID_HANDLE_VALUE) {
-    log_f(LOG_INFO, "Could not get a handle to the active console screen buffer: %s", winapi_get_last_error_str());
+    log_f(C_LOG_INFO, "Could not get a handle to the active console screen buffer: %s", winapi_get_last_error_str());
     return 1;
   }
 
@@ -4049,7 +4073,7 @@ bool output_strn(cstr text, size_t text_len) {
   CONSOLE_SCREEN_BUFFER_INFO csbi = {0};
 
   if (!GetConsoleScreenBufferInfo(console, &csbi)) {
-    log_f(LOG_ERROR, "Could not get console screen buffer info: %s", winapi_get_last_error_str());
+    log_f(C_LOG_ERROR, "Could not get console screen buffer info: %s", winapi_get_last_error_str());
     return false;
   }
 
@@ -4097,14 +4121,14 @@ bool output_strn(cstr text, size_t text_len) {
 			 buff_size,
 			 write_coord,
 			 &rect)) {
-    log_f(LOG_ERROR, "[1] Could not write to console output: [%d] %s", GetLastError(), winapi_get_last_error_str());
+    log_f(C_LOG_ERROR, "[1] Could not write to console output: [%d] %s", GetLastError(), winapi_get_last_error_str());
     return false;
   }
 
   if (!overflown) {
     // advance cursor
     if (!SetConsoleCursorPosition(console, new_cursor)) {
-      log_f(LOG_ERROR, "[1] Could not set new cursor pos: %s", winapi_get_last_error_str());
+      log_f(C_LOG_ERROR, "[1] Could not set new cursor pos: %s", winapi_get_last_error_str());
       return false;
     }
   }
@@ -4114,7 +4138,7 @@ bool output_strn(cstr text, size_t text_len) {
     new_cursor.Y++;
     // advance cursor
     if (!SetConsoleCursorPosition(console, new_cursor)) {
-      log_f(LOG_ERROR, "[2] Could not set new cursor pos: %s", winapi_get_last_error_str());
+      log_f(C_LOG_ERROR, "[2] Could not set new cursor pos: %s", winapi_get_last_error_str());
       return false;
     }
     output_strn(next_text, text_len);
@@ -4122,6 +4146,8 @@ bool output_strn(cstr text, size_t text_len) {
 
   return true;
 }
+
+#endif // _WIN32
 
 void panic_assertion(cstr msg, FILE* file, cstr filename, int line) {
   fprintf(file, "%s:%d:0: ASSERTION FAILED: %s\n", filename, line, msg);
@@ -4132,59 +4158,81 @@ void log_file(Log_type type, FILE* file, cstr fmt, ...) {
   va_list args;
   va_start(args, fmt);
 
-  SYSTEMTIME sys_time = {0};
-  GetLocalTime(&sys_time);
+  // SYSTEMTIME sys_time = {0};
+  // GetLocalTime(&sys_time);
 
-  fprintf(file, "[%02d:%02d:%02d] ", sys_time.wHour, sys_time.wMinute, sys_time.wSecond);
+  // fprintf(file, "[%02d:%02d:%02d] ", sys_time.wHour, sys_time.wMinute, sys_time.wSecond);
 
   switch (type){
-  case LOG_INFO: fprintf(file, "INFO: "); break;
-  case LOG_ERROR: fprintf(file, "ERROR: "); break;
-  case LOG_WARNING: fprintf(file, "WARNING: "); break;
+  case C_LOG_INFO: fprintf(file, "INFO: "); break;
+  case C_LOG_ERROR: fprintf(file, "ERROR: "); break;
+  case C_LOG_WARNING: fprintf(file, "WARNING: "); break;
   default: ASSERT(0 && "Unreachable");
   }
 
   while (*fmt != '\0'){
+char_jmp:
     if (*fmt == '%'){
       fmt++;
+/* fmt_jmp: */
       switch (*fmt){
       case 's': {
-	const char* str = va_arg(args, const char*);
-	fprintf(file, "%s", str);
+        const char* str = va_arg(args, const char*);
+        fprintf(file, "%s", str);
       } break;
       case 'i':
       case 'd': {
         int i = va_arg(args, int);
-	fprintf(file, "%d", i);
+        fprintf(file, "%d", i);
       } break;
       case 'o': {
-	int i = va_arg(args, int);
-	fprintf(file, "%o", i);
+        int i = va_arg(args, int);
+        fprintf(file, "%o", i);
       } break;
       case 'u': {
-	unsigned int i = va_arg(args, unsigned int);
-	fprintf(file, "%u", i);
+        unsigned int i = va_arg(args, unsigned int);
+        fprintf(file, "%u", i);
       } break;
       case 'f':
       case 'F': {
-	double i = va_arg(args, double);
-	fprintf(file, "%f", i);
+        double i = va_arg(args, double);
+        fprintf(file, "%f", i);
       } break;
       case 'p': {
         void* i = va_arg(args, void*);
-	fprintf(file, "%p", i);
+        fprintf(file, "%p", i);
       } break;
       case '%': {
-	fprintf(file, "%%");
-      }
-      case 'c':{
-        char i = va_arg(args, char);
-	fprintf(file, "%c", i);
-      }
+        fprintf(file, "%%");
+      } break;
+      case 'c': {
+        int i = va_arg(args, int);
+        fprintf(file, "%c", i);
+      } break;
+      case '.': {
+        fmt++;
+        if (fmt[0] == '*' &&
+            fmt[1] == 's') {
+            fmt += 1;
+            int count = va_arg(args, int);
+            char* str = va_arg(args, char*);
+            while (count-- > 0) {
+                fputc(*str++, file);
+            }
+        } else {
+            fputc('%', file);
+            fputc('.', file);
+            goto char_jmp;
+        }
+      } break;
+      default: {
+        fputc(*fmt, file);
+      } break;
       }
     } else {
       fputc(*fmt, file);
     }
+    if (*fmt == '\0') { break; };
     fmt++;
   }
 
@@ -4204,40 +4252,37 @@ const char* slurp_file(const char* filename) {
   FILE* f = fopen(filename, "rb");
   char* result = NULL;
 
-#define TMPBUFF_SIZE (1024)
-  char tmpbuff[TMPBUFF_SIZE] = {0}; // for strerror_s()
-
   if (f == NULL){
-    log_f(LOG_ERROR, "slurp_file::fopen(\"%s\", \"rb\") -> %s\n", filename, strerror_s(tmpbuff, TMPBUFF_SIZE, errno));
+    log_f(C_LOG_ERROR, "slurp_file::fopen(\"%s\", \"rb\") -> %s\n", filename, strerror(errno));
     defer(NULL);
   }
 
   if (fseek(f, 0, SEEK_END) < 0) {
-    log_f(LOG_ERROR, "slurp_file::fseek(f, 0, SEEK_END) -> %s\n", filename, strerror_s(tmpbuff, TMPBUFF_SIZE, errno));
+    log_f(C_LOG_ERROR, "slurp_file::fseek(f, 0, SEEK_END) -> %s\n", filename, strerror(errno));
     defer(NULL);
   }
 
   size_t fsize = ftell(f);
 
-  if (fsize == -1){
-    log_f(LOG_ERROR, "slurp_file::ftell(f) -> %s\n", filename, strerror_s(tmpbuff, TMPBUFF_SIZE, errno));
+  if (fsize == (size_t)-1){
+    log_f(C_LOG_ERROR, "slurp_file::ftell(f) -> %s\n", filename, strerror(errno));
     defer(NULL);
   }
 
   result = malloc(sizeof(char)*(fsize+1));
 
   if (result == NULL){
-    log_f(LOG_ERROR, "slurp_file::malloc(%zu) -> %s\n", sizeof(char)*fsize, strerror_s(tmpbuff, TMPBUFF_SIZE, errno));
+    log_f(C_LOG_ERROR, "slurp_file::malloc(%zu) -> %s\n", sizeof(char)*fsize, strerror(errno));
     defer(NULL);
   }
 
   if (fseek(f, 0, SEEK_SET) < 0) {
-    log_f(LOG_ERROR, "slurp_file::fseek(f, 0, SEEK_SET) -> %s\n", filename, strerror_s(tmpbuff, TMPBUFF_SIZE, errno));
+    log_f(C_LOG_ERROR, "slurp_file::fseek(f, 0, SEEK_SET) -> %s\n", filename, strerror(errno));
     defer(NULL);
   }
 
   if (fread((char*)result, sizeof(char), fsize, f) != fsize){
-    log_f(LOG_ERROR, "slurp_file::fread(result, %d, 1, f) -> %s\n", fsize, strerror_s(tmpbuff, TMPBUFF_SIZE, errno));
+    log_f(C_LOG_ERROR, "slurp_file::fread(result, %d, 1, f) -> %s\n", fsize, strerror(errno));
     defer(NULL);
   }
 
@@ -4311,7 +4356,7 @@ bool cstr_to_wstr(Arena* warena, cstr str) {
 		  str,
 		  count);
 
-  if (ret == -1) {
+  if (ret == (uint)-1) {
     log_error("Encountered an invalid multibyte character!");
     return false;
   } else if (ret == count) {
