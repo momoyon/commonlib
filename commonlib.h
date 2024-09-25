@@ -1005,7 +1005,7 @@ void panic_assertion(cstr msg, FILE* file, cstr filename, int line);
 //
 
 void os_get_timedate(Arena* a);
-
+bool os_file_exists(cstr filename);
 //
 // Winapi
 //
@@ -1019,7 +1019,10 @@ bool output_str(cstr text);
 bool output_strn(cstr text, size_t text_len);
 cstr winapi_get_last_error_str(void);
 cstr winapi_get_current_working_directory(Arena* arena);
-#endif
+#endif // _WIN32
+#ifdef linux
+#include <sys/stat.h>
+#endif // linux
 //
 // logging
 //
@@ -1044,7 +1047,8 @@ void log_file(Log_type type, FILE* file, cstr fmt, ...);
 //
 
 // reads entire file and gives back the string holding the contents. (caller must be responsible for freeing the string!)
-const char* slurp_file(const char* filename);
+const char* slurp_file(const char* filename, bool* success);
+void touch_file_if_doesnt_exist(cstr file);
 
 //
 // ### Allocators ###
@@ -4010,13 +4014,24 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 void os_get_timedate(Arena* a) {
     (void)a;
 }
+
+bool os_file_exists(cstr filename) {
+    (void) filename;
+    return false;
+}
+
 #endif // _WIN32
 #ifdef linux
 void os_get_timedate(Arena* a) {
     (void)a;
 }
-#endif // linux
 
+bool os_file_exists(cstr filename) {
+    struct stat buf;
+    return stat(filename, &buf) == 0;
+}
+
+#endif // linux
 
 #ifdef _WIN32
 // Winapi
@@ -4167,72 +4182,51 @@ void log_file(Log_type type, FILE* file, cstr fmt, ...) {
   case C_LOG_INFO: fprintf(file, "INFO: "); break;
   case C_LOG_ERROR: fprintf(file, "ERROR: "); break;
   case C_LOG_WARNING: fprintf(file, "WARNING: "); break;
+  case C_LOG_COUNT:
   default: ASSERT(0 && "Unreachable");
   }
 
   while (*fmt != '\0'){
-char_jmp:
     if (*fmt == '%'){
       fmt++;
-/* fmt_jmp: */
       switch (*fmt){
       case 's': {
-        const char* str = va_arg(args, const char*);
-        fprintf(file, "%s", str);
+	const char* str = va_arg(args, const char*);
+	fprintf(file, "%s", str);
       } break;
       case 'i':
       case 'd': {
         int i = va_arg(args, int);
-        fprintf(file, "%d", i);
+	fprintf(file, "%d", i);
       } break;
       case 'o': {
-        int i = va_arg(args, int);
-        fprintf(file, "%o", i);
+	int i = va_arg(args, int);
+	fprintf(file, "%o", i);
       } break;
       case 'u': {
-        unsigned int i = va_arg(args, unsigned int);
-        fprintf(file, "%u", i);
+	unsigned int i = va_arg(args, unsigned int);
+	fprintf(file, "%u", i);
       } break;
       case 'f':
       case 'F': {
-        double i = va_arg(args, double);
-        fprintf(file, "%f", i);
+	double i = va_arg(args, double);
+	fprintf(file, "%f", i);
       } break;
       case 'p': {
         void* i = va_arg(args, void*);
-        fprintf(file, "%p", i);
+	fprintf(file, "%p", i);
       } break;
       case '%': {
-        fprintf(file, "%%");
+	fprintf(file, "%%");
       } break;
-      case 'c': {
+      case 'c':{
         int i = va_arg(args, int);
-        fprintf(file, "%c", i);
-      } break;
-      case '.': {
-        fmt++;
-        if (fmt[0] == '*' &&
-            fmt[1] == 's') {
-            fmt += 1;
-            int count = va_arg(args, int);
-            char* str = va_arg(args, char*);
-            while (count-- > 0) {
-                fputc(*str++, file);
-            }
-        } else {
-            fputc('%', file);
-            fputc('.', file);
-            goto char_jmp;
-        }
-      } break;
-      default: {
-        fputc(*fmt, file);
+	fprintf(file, "%c", i);
       } break;
       }
     } else {
       fputc(*fmt, file);
     }
-    if (*fmt == '\0') { break; };
     fmt++;
   }
 
@@ -4248,7 +4242,7 @@ char_jmp:
   result = ret_val;\
   goto defer
 
-const char* slurp_file(const char* filename) {
+const char* slurp_file(const char* filename, bool* success) {
   FILE* f = fopen(filename, "rb");
   char* result = NULL;
 
@@ -4291,9 +4285,16 @@ const char* slurp_file(const char* filename) {
 
  defer:
   if (f) fclose(f);
+  *success = result != NULL;
   return result;
 }
 
+void touch_file_if_doesnt_exist(cstr filename) {
+    if (os_file_exists(filename)) return;
+    FILE* file = fopen(filename, "w");
+    if (file)
+        fclose(file);
+}
 
 //
 // ### Allocators ###
