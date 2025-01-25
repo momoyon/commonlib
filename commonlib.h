@@ -112,6 +112,10 @@ typedef struct c_Arena c_Arena;
 // OS
 //
 
+#if defined(__linux__)
+#include <sys/stat.h>
+#endif
+
 void c_os_get_timedate(c_Arena* a);
 bool c_os_file_exists(cstr filename);
 
@@ -329,7 +333,6 @@ void* c_Arena_alloc(c_Arena* a, size_t size) {
     void* res = a->ptr;
     a->ptr = (uint8*)a->ptr + size;
 
-    // TODO: realloc buff with greater buff_size
     size_t diff = (size_t)((uint8*)a->ptr - (uint8*)a->buff);
     if (diff > a->buff_size) {
         c_log_info("c_Arena resized from %zu to %zu", a->buff_size, a->buff_size*2);
