@@ -26,9 +26,23 @@ class Test:
         self.expected_stdout = read_or_create_expected_file("out")
         self.expected_stderr = read_or_create_expected_file("err")
         self.expected_returncode = read_or_create_expected_file("code")
+        if self.expected_returncode == '':
+            self.expected_returncode = -1
+        else:
+            self.expected_returncode = int(self.expected_returncode)
 
         # if self.expected_stdout: print(f"{self.name}.out.expected: {self.expected_stdout}")
         # if self.expected_stderr: print(f"{self.name}.err.expected: {self.expected_stderr}")
+    def save_expected(self):
+        def write_expected(name: str, content: str) -> str:
+            f = f"{self.name}.{name}.expected"
+            with open(f, "w") as file:
+                file.write(content)
+
+        write_expected("out", self.expected_stdout)
+        write_expected("err", self.expected_stderr)
+        write_expected("code", str(self.expected_returncode))
+
 
 def usage(program: str):
     print(f"Usage: {program} <subcmd>")
@@ -40,6 +54,7 @@ def hhelp():
         help    - Prints this help message.
         build   - Builds all the tests.
         run     - Runs all the tests.
+        record  - Records the expected behaviour of all the tests.
           ''')
 
 def main():
@@ -102,7 +117,7 @@ def main():
                                  capture_output = True,
                                  text = True)
 
-            if len(test.expected_returncode) <= 0:
+            if test.expected_returncode == -1:
                 print(f"[WARNING] Test doesn't have any expected returncode!")
                 print(f"[WARNING] Please record the expected behaviour of the test using the 'record' subcommand!")
 
@@ -112,6 +127,26 @@ def main():
                 print(f"But Got: >>>{res.stdout}>>>")
                 continue
             print('[SUCCESS]')
+    elif subcmd == "record":
+        for test_name in tests:
+            print(f'+ Recording expected behaviour for {test_name}...')
+            test = tests[test_name]
+
+            prompt_msg = "Record current behaviour as the expected one? [y/N]"
+            ans = input(prompt_msg)
+
+            if ans.lower() == "y":
+                res = subprocess.run([f"./{test_name}"],
+                                     capture_output = True,
+                                     text = True)
+                tests[test_name].expected_stdout = res.stdout
+                tests[test_name].expected_stderr = res.stderr
+                tests[test_name].expected_returncode = res.returncode
+                tests[test_name].save_expected()
+                print('[SUCCESS] Recorded expected behaviour')
+            else:
+                print('[SKIP]')
+
     else:
         print(f"[ERROR] Invalid subcommand '{subcmd}'", file=sys.stderr)
         exit(1)
