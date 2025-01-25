@@ -8,6 +8,38 @@
 #include <string.h>
 #include <ctype.h>
 
+// Remove Prefix
+#ifdef COMMONLIB_REMOVE_PREFIX
+#define ASSERT c_ASSERT
+#define ARRAY_LEN c_ARRAY_LEN
+
+#define c_da_append
+#define c_DYNAMIC_ARRAY_INITIAL_CAPACITY
+// #define c_DYNAMIC_ARRAY_INITIAL_CAPACITY
+
+#define os_get_timedate c_os_get_timedate
+#define os_file_exists c_os_file_exists
+
+#define log_error c_log_error
+#define log_info c_log_info
+#define log_warning c_log_warning
+
+#define slurp_file c_slurp_file
+#define touch_file_if_doesnt_exist c_touch_file_if_doesnt_exist
+
+#define Arena c_Arena
+#define Arena_make c_Arena_make
+#define Arena_alloc c_Arena_alloc
+#define Arena_reset c_Arena_reset
+#define Arena_free c_Arena_free
+#define Arena_alloc_str c_Arena_alloc_str
+#define Arena_alloc_wstr c_Arena_alloc_wstr
+
+#define String_view c_String_view
+#define String_view c_String_view
+
+#endif // COMMONLIB_REMOVE_PREFIX
+
 // typedefs
 typedef unsigned int uint;
 typedef uint8_t      uint8;
