@@ -1,3 +1,4 @@
+#!/bin/env python3
 import os
 import subprocess
 import sys
@@ -6,8 +7,8 @@ CC="gcc"
 TESTS_DIR="./tests/"
 
 class Test:
-    expected_stdout = None
-    expected_stderr = None
+    expected_stdout = ''
+    expected_stderr = ''
     expected_returncode = -1
 
     def __init__(self, name):
@@ -34,7 +35,7 @@ class Test:
         # if self.expected_stdout: print(f"{self.name}.out.expected: {self.expected_stdout}")
         # if self.expected_stderr: print(f"{self.name}.err.expected: {self.expected_stderr}")
     def save_expected(self):
-        def write_expected(name: str, content: str) -> str:
+        def write_expected(name: str, content: str):
             f = f"{self.name}.{name}.expected"
             with open(f, "w") as file:
                 file.write(content)
@@ -58,7 +59,6 @@ def hhelp():
           ''')
 
 def main():
-    og_dir = os.getcwd()
     program = sys.argv.pop(0)
 
     if len(sys.argv) <= 0:
@@ -83,12 +83,16 @@ def main():
     # for v in tests:
     #     print(f"{v}: {tests[v]}")
 
+    total_tests_count = len(tests)
+    current_test_id = -1
+
     if subcmd == "help":
         hhelp()
         exit(0)
     elif subcmd == "build":
         for test_name in tests:
-            print(f'+ Building {test_name}...')
+            current_test_id += 1
+            print(f'+ Building {test_name} [{current_test_id+1}/{total_tests_count}]...')
             test = tests[test_name]
 
             res = subprocess.run([CC, '-o', test_name, f"{test_name}.c"],
@@ -102,20 +106,25 @@ def main():
                     print('')
                 continue
             else:
-                print("[SUCCESS] ", end='')
+                print("[PASS] ", end='')
                 if res.stdout:
                     print(f"{res.stdout}")
                 else:
                     print('')
-
+        if current_test_id == total_tests_count-1:
+            print("ALL TESTS BUILD")
     elif subcmd == "run":
         for test_name in tests:
-            print(f'+ Running {test_name}...')
+            current_test_id += 1
+            print(f'+ Running {test_name} [{current_test_id+1}/{total_tests_count}]...')
             test = tests[test_name]
 
-            res = subprocess.run([f"./{test_name}"],
-                                 capture_output = True,
-                                 text = True)
+            res = None
+            try:
+                res = subprocess.run([f"./{test_name}"], capture_output = True, text = True)
+            except Exception as e:
+                print(f"[ERROR] Failed to run ./{test_name}: {e}")
+                continue
 
             if test.expected_returncode == -1:
                 print(f"[WARNING] Test doesn't have any expected returncode!")
@@ -126,7 +135,9 @@ def main():
                 print(f"Expected: >>>{test.expected_stdout}>>>")
                 print(f"But Got: >>>{res.stdout}>>>")
                 continue
-            print('[SUCCESS]')
+            print('[PASS]')
+        if current_test_id == total_tests_count-1:
+            print("ALL TESTS PASS")
     elif subcmd == "record":
         for test_name in tests:
             print(f'+ Recording expected behaviour for {test_name}...')
