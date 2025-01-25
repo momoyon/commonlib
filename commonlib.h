@@ -1,5 +1,5 @@
-#ifndef _STDLIB_H_
-#define _STDLIB_H_
+#ifndef _COMMONLIB_H_
+#define _COMMONLIB_H_
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdarg.h>
@@ -7,9 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#ifdef _WIN32
-#include <windows.h>
-#endif
 #include <locale.h>
 
 
@@ -33,19 +30,21 @@ typedef wchar_t wchar;
 typedef const char*  cstr;
 typedef const wchar* wstr;
 
-#define ASSERT(condition) if (!(condition)) panic_assertion(#condition, stderr, __FILE__, __LINE__)
+#define ASSERT(condition, msg) do {\
+        if (!(condition)) {\
+            fprintf(stderr, "%s:%d:0 [ASSERTION FAILED] %s: %s", __FILE__, __LINE__, #condition, msg);\
+            exit(1);\
+        }\
+    } while (0)
 
 #define ARRAY_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
 #define STRUCT(name) typedef struct name name
 #define ENUM(name)   typedef enum name name
-#define DYNAMIC_ARRAY(type, name) type* name = NULL
 
 // Struct pre-decls
 
 STRUCT(Arena);
-
-void panic_assertion(cstr msg, FILE* file, cstr filename, int line);
 
 //
 // OS
@@ -53,41 +52,16 @@ void panic_assertion(cstr msg, FILE* file, cstr filename, int line);
 
 void os_get_timedate(Arena* a);
 bool os_file_exists(cstr filename);
-//
-// Winapi
-//
-#ifdef _WIN32
-#define WINAPI_ERROR_MSG_BUFF_SIZE 1024
-static char winapi_error_msg_buff[WINAPI_ERROR_MSG_BUFF_SIZE];
-#define WINAPI_OUTPUT_STR_BUFF_SIZE (16*1024)
-static CHAR_INFO winapi_output_str_buff[WINAPI_OUTPUT_STR_BUFF_SIZE];
 
-bool output_str(cstr text);
-bool output_strn(cstr text, size_t text_len);
-cstr winapi_get_last_error_str(void);
-cstr winapi_get_current_working_directory(Arena* arena);
-#endif // _WIN32
-#ifdef linux
-#include <sys/stat.h>
-#endif // linux
 //
-// logging
+// Logging
 //
 
 // FLUSH_ON_LOG - define this macro to fflush() on every call to log() not defined by default.
 
-typedef enum {
-  C_LOG_INFO = 0,
-  C_LOG_ERROR,
-  C_LOG_WARNING,
-  C_LOG_COUNT,
-} Log_type;
-
-void log_file(Log_type type, FILE* file, cstr fmt, ...);
-#define log_f(type, fmt, ...)  log_file(type, stdout, fmt, ##__VA_ARGS__)
-#define log_info(fmt, ...)     log_f(C_LOG_INFO, fmt, ##__VA_ARGS__)
-#define log_error(fmt, ...)    log_f(C_LOG_ERROR, fmt, ##__VA_ARGS__)
-#define log_warning(fmt, ...)  log_f(C_LOG_WARNING, fmt, ##__VA_ARGS__)
+#define log_info(fmt, ...)     printf("%s "fmt"\n", "[INFO]", ##__VA_ARGS__)
+#define log_warning(fmt, ...)  fprintf(stderr, "%s "fmt"\n", "[WARNING]", ##__VA_ARGS__)
+#define log_error(fmt, ...)    fprintf(stderr, "%s "fmt"\n", "[ERROR]", ##__VA_ARGS__)
 
 //
 // File
@@ -95,7 +69,7 @@ void log_file(Log_type type, FILE* file, cstr fmt, ...);
 
 // reads entire file and gives back the string holding the contents. (caller must be responsible for freeing the string!)
 const char* slurp_file(const char* filename, bool* success);
-void touch_file_if_doesnt_exist(cstr file);
+// void touch_file_if_doesnt_exist(cstr file);
 
 //
 // ### Allocators ###
@@ -174,7 +148,7 @@ bool sv_equals(String_view sv1, String_view sv2);
 
 cstr shift_args(int* argc, char*** argv);
 
-#endif /* _STDLIB_H_ */
+#endif /* _COMMONLIB_H_ */
 
 //////////////////////////////////////////////////
 #ifdef COMMONLIB_IMPLEMENTATION
@@ -188,232 +162,30 @@ cstr shift_args(int* argc, char*** argv);
 // OS
 //
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__CYGWIN__)
 void os_get_timedate(Arena* a) {
     (void)a;
+    ASSERT(false, "Unimplemented!");
 }
 
 bool os_file_exists(cstr filename) {
     (void) filename;
+    ASSERT(false, "Unimplemented!");
     return false;
 }
 
-#endif // _WIN32
-#ifdef linux
+#elif defined(__linux__)
 void os_get_timedate(Arena* a) {
     (void)a;
+    ASSERT(false, "Unimplemented!");
 }
 
 bool os_file_exists(cstr filename) {
     struct stat buf;
+    ASSERT(false, "Unimplemented!");
     return stat(filename, &buf) == 0;
 }
-
-#endif // linux
-
-#ifdef _WIN32
-// Winapi
-cstr winapi_get_last_error_str(void) {
-  DWORD error_code = GetLastError();
-  if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, error_code, 0, winapi_error_msg_buff, WINAPI_ERROR_MSG_BUFF_SIZE, NULL)){
-    log_f(C_LOG_ERROR, "FormatMessage() failed with code: %d", GetLastError());
-    return NULL;
-  }
-  return winapi_error_msg_buff;
-}
-
-cstr winapi_get_current_working_directory(Arena* arena) {
-  if (arena->buff_size < MAX_PATH) {
-    log_error("Arena size should be at least of size MAX_PATH(%u)", MAX_PATH);
-    return NULL;
-  }
-
-  size_t n = GetCurrentDirectoryA((DWORD)arena->buff_size, arena->buff);
-  if (n == 0) {
-    log_error("%s -> %s", __func__, winapi_get_last_error_str());
-    return NULL;
-  }
-  return arena->buff;
-}
-
-bool output_str(cstr text) {
-  return output_strn(text, strlen(text));
-}
-
-bool output_strn(cstr text, size_t text_len) {
-  SECURITY_ATTRIBUTES sa = {0};
-  sa.nLength = sizeof(sa);
-  sa.bInheritHandle = TRUE;
-
-  HANDLE console = CreateFileA("CONOUT$",
-			       GENERIC_READ|GENERIC_WRITE,
-			       FILE_SHARE_WRITE,
-			       &sa,
-			       OPEN_EXISTING,
-			       0,
-			       NULL);
-
-  if (console == INVALID_HANDLE_VALUE) {
-    log_f(C_LOG_INFO, "Could not get a handle to the active console screen buffer: %s", winapi_get_last_error_str());
-    return 1;
-  }
-
-  if (text_len == 0) return false;
-
-  ASSERT(text_len < WINAPI_OUTPUT_STR_BUFF_SIZE);
-  CHAR_INFO* buff = winapi_output_str_buff;
-
-  CONSOLE_SCREEN_BUFFER_INFO csbi = {0};
-
-  if (!GetConsoleScreenBufferInfo(console, &csbi)) {
-    log_f(C_LOG_ERROR, "Could not get console screen buffer info: %s", winapi_get_last_error_str());
-    return false;
-  }
-
-  COORD buff_size = {0, 1};
-  COORD new_cursor = {
-    .X = csbi.dwCursorPosition.X,
-    .Y = csbi.dwCursorPosition.Y
-  };
-
-  bool overflown = false;
-
-  char* next_text = NULL;
-
-  for (size_t i = 0; i < text_len; ++i) {
-    if (text[i] == '\n') {
-      overflown = true;
-      next_text = (char*)text+buff_size.X+1;
-      text_len = (text+text_len)-text;
-      break;
-    } else {
-      buff[i].Char.AsciiChar = text[i];
-      buff_size.X++;
-      new_cursor.X++;
-      if (new_cursor.X >= csbi.dwMaximumWindowSize.X) {
-	overflown = true;
-	next_text = (char*)text+buff_size.X;
-	text_len = (text+text_len)-text;
-	break;
-      }
-    }
-
-    buff[i].Attributes = FOREGROUND_RED|FOREGROUND_INTENSITY;
-  }
-
-  COORD write_coord = {0, 0};
-  SMALL_RECT rect = {
-    .Left   = csbi.dwCursorPosition.X,
-    .Top    = csbi.dwCursorPosition.Y,
-    .Right  = new_cursor.X,
-    .Bottom = new_cursor.Y,
-  };
-
-  if(!WriteConsoleOutput(console,
-			 buff,
-			 buff_size,
-			 write_coord,
-			 &rect)) {
-    log_f(C_LOG_ERROR, "[1] Could not write to console output: [%d] %s", GetLastError(), winapi_get_last_error_str());
-    return false;
-  }
-
-  if (!overflown) {
-    // advance cursor
-    if (!SetConsoleCursorPosition(console, new_cursor)) {
-      log_f(C_LOG_ERROR, "[1] Could not set new cursor pos: %s", winapi_get_last_error_str());
-      return false;
-    }
-  }
-
-  if (overflown) {
-    new_cursor.X = 0;
-    new_cursor.Y++;
-    // advance cursor
-    if (!SetConsoleCursorPosition(console, new_cursor)) {
-      log_f(C_LOG_ERROR, "[2] Could not set new cursor pos: %s", winapi_get_last_error_str());
-      return false;
-    }
-    output_strn(next_text, text_len);
-  }
-
-  return true;
-}
-
-#endif // _WIN32
-
-void panic_assertion(cstr msg, FILE* file, cstr filename, int line) {
-  fprintf(file, "%s:%d:0: ASSERTION FAILED: %s\n", filename, line, msg);
-  exit(1);
-}
-
-void log_file(Log_type type, FILE* file, cstr fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-
-  // SYSTEMTIME sys_time = {0};
-  // GetLocalTime(&sys_time);
-
-  // fprintf(file, "[%02d:%02d:%02d] ", sys_time.wHour, sys_time.wMinute, sys_time.wSecond);
-
-  switch (type){
-  case C_LOG_INFO: fprintf(file, "INFO: "); break;
-  case C_LOG_ERROR: fprintf(file, "ERROR: "); break;
-  case C_LOG_WARNING: fprintf(file, "WARNING: "); break;
-  case C_LOG_COUNT:
-  default: ASSERT(0 && "Unreachable");
-  }
-
-  while (*fmt != '\0'){
-    if (*fmt == '%'){
-      fmt++;
-      switch (*fmt){
-      case 's': {
-	const char* str = va_arg(args, const char*);
-	fprintf(file, "%s", str);
-      } break;
-      case 'i':
-      case 'd': {
-        int i = va_arg(args, int);
-	fprintf(file, "%d", i);
-      } break;
-      case 'o': {
-	int i = va_arg(args, int);
-	fprintf(file, "%o", i);
-      } break;
-      case 'u': {
-	unsigned int i = va_arg(args, unsigned int);
-	fprintf(file, "%u", i);
-      } break;
-      case 'f':
-      case 'F': {
-	double i = va_arg(args, double);
-	fprintf(file, "%f", i);
-      } break;
-      case 'p': {
-        void* i = va_arg(args, void*);
-	fprintf(file, "%p", i);
-      } break;
-      case '%': {
-	fprintf(file, "%%");
-      } break;
-      case 'c':{
-        int i = va_arg(args, int);
-	fprintf(file, "%c", i);
-      } break;
-      }
-    } else {
-      fputc(*fmt, file);
-    }
-    fmt++;
-  }
-
-  fputc('\n', file);
-#ifdef FLUSH_ON_LOG
-  fflush(file);
 #endif
-  va_end(args);
-}
 
 // simple and dirty way to have defering in C (not recommended to use!)
 #define defer(ret_val) \
@@ -425,36 +197,36 @@ const char* slurp_file(const char* filename, bool* success) {
   char* result = NULL;
 
   if (f == NULL){
-    log_f(C_LOG_ERROR, "slurp_file::fopen(\"%s\", \"rb\") -> %s\n", filename, strerror(errno));
+    log_error("slurp_file::fopen(\"%s\", \"rb\") -> %s\n", filename, strerror(errno));
     defer(NULL);
   }
 
   if (fseek(f, 0, SEEK_END) < 0) {
-    log_f(C_LOG_ERROR, "slurp_file::fseek(f, 0, SEEK_END) -> %s\n", filename, strerror(errno));
+    log_error("slurp_file::fseek(f, 0, SEEK_END) -> %s\n", filename, strerror(errno));
     defer(NULL);
   }
 
   size_t fsize = ftell(f);
 
   if (fsize == (size_t)-1){
-    log_f(C_LOG_ERROR, "slurp_file::ftell(f) -> %s\n", filename, strerror(errno));
+    log_error("slurp_file::ftell(f) -> %s\n", filename, strerror(errno));
     defer(NULL);
   }
 
   result = malloc(sizeof(char)*(fsize+1));
 
   if (result == NULL){
-    log_f(C_LOG_ERROR, "slurp_file::malloc(%zu) -> %s\n", sizeof(char)*fsize, strerror(errno));
+    log_error("slurp_file::malloc(%zu) -> %s\n", sizeof(char)*fsize, strerror(errno));
     defer(NULL);
   }
 
   if (fseek(f, 0, SEEK_SET) < 0) {
-    log_f(C_LOG_ERROR, "slurp_file::fseek(f, 0, SEEK_SET) -> %s\n", filename, strerror(errno));
+    log_error("slurp_file::fseek(f, 0, SEEK_SET) -> %s\n", filename, strerror(errno));
     defer(NULL);
   }
 
   if (fread((char*)result, sizeof(char), fsize, f) != fsize){
-    log_f(C_LOG_ERROR, "slurp_file::fread(result, %d, 1, f) -> %s\n", fsize, strerror(errno));
+    log_error("slurp_file::fread(result, %d, 1, f) -> %s\n", fsize, strerror(errno));
     defer(NULL);
   }
 
@@ -467,12 +239,12 @@ const char* slurp_file(const char* filename, bool* success) {
   return result;
 }
 
-void touch_file_if_doesnt_exist(cstr filename) {
-    if (os_file_exists(filename)) return;
-    FILE* file = fopen(filename, "w");
-    if (file)
-        fclose(file);
-}
+// void touch_file_if_doesnt_exist(cstr filename) {
+//     if (os_file_exists(filename)) return;
+//     FILE* file = fopen(filename, "w");
+//     if (file)
+//         fclose(file);
+// }
 
 //
 // ### Allocators ###
@@ -486,13 +258,13 @@ Arena Arena_make(size_t size) {
   res.buff = malloc(res.buff_size);
   res.ptr = res.buff;
 
-  ASSERT(res.buff);
+  ASSERT(res.buff, "Malloc failed?");
 
   return res;
 }
 
 void* Arena_alloc(Arena* a, size_t size) {
-  ASSERT(a->buff);
+  ASSERT(a->buff, "Bro pass an initialized arena!");
 
   void* res = a->ptr;
   a->ptr = (uint8*)a->ptr + size;
