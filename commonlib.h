@@ -8,6 +8,12 @@
 #include <string.h>
 #include <ctype.h>
 
+// Memory allocation
+#define C_MALLOC malloc
+#define C_FREE free
+#define C_REALLOC realloc
+#define C_MEMCPY memcpy
+
 // Remove Prefix
 #ifdef COMMONLIB_REMOVE_PREFIX
 #define ASSERT c_ASSERT
@@ -35,7 +41,6 @@
 #define Arena_alloc_str c_Arena_alloc_str
 #define Arena_alloc_wstr c_Arena_alloc_wstr
 
-#define String_view c_String_view
 #define String_view c_String_view
 
 #endif // COMMONLIB_REMOVE_PREFIX
@@ -98,12 +103,12 @@ typedef struct c_Arena c_Arena;
 		if ((da).items == NULL) {\
 			(da).capacity = DYNAMIC_ARRAY_INITIAL_CAPACITY;\
 			(da).count = 0;\
-			(da).items = malloc(sizeof(elm) * (da).capacity);\
+			(da).items = C_MALLOC(sizeof(elm) * (da).capacity);\
 		}\
 		if ((da).count + 1 > (da).capacity) {\
 			(da).capacity *= 2;\
 			if (DEBUG) log_info("%s realloced!", #da);\
-			ASSERT(realloc((da).items, (da).capacity * sizeof(*(da).items)) != NULL, "TODO: Log error instead of asserting");\
+			ASSERT(C_REALLOC((da).items, (da).capacity * sizeof(*(da).items)) != NULL, "TODO: Log error instead of asserting");\
 		}\
 		(da).items[(da).count++] = elm;\
 	} while (0)
@@ -174,9 +179,9 @@ typedef struct {
     char* data;
     size_t size;
     size_t capacity;
-} String_builder;
+} c_String_builder;
 
-void sb_append(String_builder* sb, char* data);
+void c_sb_append(c_String_builder* sb, char* data);
 
 //
 // String view
@@ -290,7 +295,7 @@ const char *c_slurp_file(const char* filename, bool* success) {
         defer(NULL);
     }
 
-    result = malloc(sizeof(char)*(fsize+1));
+    result = C_MALLOC(sizeof(char)*(fsize+1));
 
     if (result == NULL){
         c_log_error("slurp_file::malloc(%zu) -> %s\n", sizeof(char)*fsize, strerror(errno));
@@ -331,7 +336,7 @@ void c_touch_file_if_doesnt_exist(cstr filename) {
 c_Arena c_Arena_make(size_t size) {
     c_Arena res = {0};
     res.buff_size = size == 0 ? ARENA_BUFF_INITIAL_SIZE : size;
-    res.buff = malloc(res.buff_size);
+    res.buff = C_MALLOC(res.buff_size);
     res.ptr = res.buff;
 
     c_ASSERT(res.buff, "Malloc failed?");
@@ -349,7 +354,7 @@ void* c_Arena_alloc(c_Arena* a, size_t size) {
     if (diff > a->buff_size) {
         c_log_info("c_Arena resized from %zu to %zu", a->buff_size, a->buff_size*2);
         a->buff_size *= 2;
-        a->buff = realloc(a->buff, a->buff_size);
+        a->buff = C_REALLOC(a->buff, a->buff_size);
         a->ptr = (uint8*)a->buff + diff;
         res = a->ptr;
         a->ptr = (uint8*)a->ptr + size;
@@ -364,22 +369,22 @@ void c_Arena_reset(c_Arena* a) {
 }
 
 void c_Arena_free(c_Arena* a) {
-    free(a->buff);
+    C_FREE(a->buff);
 }
 
 //
 // String Builder
 //
 
-void sb_append(String_builder* sb, char* data) {
+void c_sb_append(c_String_builder* sb, char* data) {
     size_t data_size = strlen(data);
     if (sb->size + data_size > sb->capacity) {
         sb->capacity *= 2;
-        sb->data = realloc(sb->data, sb->capacity);
+        sb->data = C_REALLOC(sb->data, sb->capacity);
     }
 
     // void *memcpy(void dest[restrict .n], const void src[restrict .n],
-    memcpy((uintptr_t)sb->data + (uintptr_t)sb->data, data, data_size);
+    C_MEMCPY((void *)((uintptr_t)sb->data + (uintptr_t)sb->data), data, data_size);
     sb->size += data_size;
 }
 
@@ -522,7 +527,7 @@ void c_sv_trim(c_String_view* sv){
 
 char* c_sv_to_cstr(c_String_view sv){
     char* res = (char*)calloc(1, sizeof(char)*sv.count);
-    memcpy(res, sv.data, sv.count);
+    C_MEMCPY(res, sv.data, sv.count);
     return res;
 }
 
@@ -530,14 +535,14 @@ char* c_sv_to_cstr(c_String_view sv){
 int32 c_sv_to_int(c_String_view sv) {
     char* str = c_sv_to_cstr(sv);
     int32 res = atoi(str);
-    free(str);
+    C_FREE(str);
     return res;
 }
 
 uint64 c_sv_to_uint64(c_String_view sv) {
     char* str = c_sv_to_cstr(sv);
     uint64 res = (uint64)atoll(str);
-    free(str);
+    C_FREE(str);
     return res;
 }
 
@@ -545,14 +550,14 @@ uint8 c_sv_to_uint8_hex(c_String_view sv) {
     char* str = c_sv_to_cstr(sv);
     char* end = str + sv.count;
     uint8 res = (uint8)strtol(str, &end, 16);
-    free(str);
+    C_FREE(str);
     return res;
 }
 
 float32 c_sv_to_float(c_String_view sv) {
     char* str = c_sv_to_cstr(sv);
     float32 res = (float32)atof(str);
-    free(str);
+    C_FREE(str);
     return res;
 }
 
@@ -560,7 +565,7 @@ void*    c_sv_to_ptr(c_String_view sv) {
     char* str = c_sv_to_cstr(sv);
     char* end = NULL;
     void* res = (void*)strtoull(str, &end, 16);
-    free(str);
+    C_FREE(str);
     return res;
 }
 
