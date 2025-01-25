@@ -167,6 +167,18 @@ void c_Arena_free(c_Arena* a);
 #define c_Arena_alloc_wstr(a, fmt, ...) c_Arena_alloc(&a, sizeof(char)*wprintf(a.ptr, a.buff_size - ((uint8*)a.ptr - (uint8*)a.buff), (fmt), __VA_ARGS__)+1)
 
 //
+// String Builder
+//
+
+typedef struct {
+    char* data;
+    size_t size;
+    size_t capacity;
+} String_builder;
+
+void sb_append(String_builder* sb, char* data);
+
+//
 // String view
 //
 
@@ -353,6 +365,22 @@ void c_Arena_reset(c_Arena* a) {
 
 void c_Arena_free(c_Arena* a) {
     free(a->buff);
+}
+
+//
+// String Builder
+//
+
+void sb_append(String_builder* sb, char* data) {
+    size_t data_size = strlen(data);
+    if (sb->size + data_size > sb->capacity) {
+        sb->capacity *= 2;
+        sb->data = realloc(sb->data, sb->capacity);
+    }
+
+    // void *memcpy(void dest[restrict .n], const void src[restrict .n],
+    memcpy((uintptr_t)sb->data + (uintptr_t)sb->data, data, data_size);
+    sb->size += data_size;
 }
 
 //
