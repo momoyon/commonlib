@@ -37,9 +37,44 @@ typedef const wchar* wstr;
 
 #define c_ARRAY_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
+//
 // Struct pre-decls
+//
 
 typedef struct c_Arena c_Arena;
+
+
+//
+// ## Data Structures
+//
+
+//
+// Dynamic-Array
+//
+
+// NOTE: To use c_da_append() the Dynamic-Array struct should be defined using
+// DEFINE_DYNAMIC_ARRAY or have the same members as below!
+#define DEFINE_DYNAMIC_ARRAY(struct_name, elm_type) typedef struct {\
+        elm_type *items;\
+        size_t count;\
+        size_t capacity;\
+    }
+
+#define c_DYNAMIC_ARRAY_INITIAL_CAPACITY (sizeof(size_t))
+
+#define c_da_append(da, elm) do {\
+		if ((da).items == NULL) {\
+			(da).capacity = DYNAMIC_ARRAY_INITIAL_CAPACITY;\
+			(da).count = 0;\
+			(da).items = malloc(sizeof(elm) * (da).capacity);\
+		}\
+		if ((da).count + 1 > (da).capacity) {\
+			(da).capacity *= 2;\
+			if (DEBUG) log_info("%s realloced!", #da);\
+			ASSERT(realloc((da).items, (da).capacity * sizeof(*(da).items)) != NULL, "TODO: Log error instead of asserting");\
+		}\
+		(da).items[(da).count++] = elm;\
+	} while (0)
 
 //
 // OS
