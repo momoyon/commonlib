@@ -19,8 +19,8 @@
 #define ASSERT c_ASSERT
 #define ARRAY_LEN c_ARRAY_LEN
 
-#define c_da_append
-#define c_DYNAMIC_ARRAY_INITIAL_CAPACITY
+#define da_append c_da_append
+#define DYNAMIC_ARRAY_INITIAL_CAPACITY c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 // #define c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 
 #define os_get_timedate c_os_get_timedate
