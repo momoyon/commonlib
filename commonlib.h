@@ -91,24 +91,34 @@ typedef struct c_Arena c_Arena;
 
 // NOTE: To use c_da_append() the Dynamic-Array struct should be defined using
 // DEFINE_DYNAMIC_ARRAY or have the same members as below!
-#define DEFINE_DYNAMIC_ARRAY(struct_name, elm_type) typedef struct {\
-        elm_type *items;\
-        size_t count;\
-        size_t capacity;\
-    }
+// NOTE!!!: We actually don't want this since this makes the user want to 
+// use this macro to define dynamic arrays. But the user might want extra fields
+// in the struct; So we recommend defining da structs manually like:
+// ```C
+// typedef struct {
+//    <item-type> items;
+//    size_t count;
+//    size_t capacity;
+//    [extra fields...];
+// }
+// ```
+// #define DEFINE_DYNAMIC_ARRAY(struct_name, elm_type) typedef struct {\
+//         elm_type *items;\
+//         size_t count;\
+//         size_t capacity;\
+//     }
 
 #define c_DYNAMIC_ARRAY_INITIAL_CAPACITY (sizeof(size_t))
 
 #define c_da_append(da, elm) do {\
 		if ((da).items == NULL) {\
-			(da).capacity = DYNAMIC_ARRAY_INITIAL_CAPACITY;\
+			(da).capacity = c_DYNAMIC_ARRAY_INITIAL_CAPACITY;\
 			(da).count = 0;\
 			(da).items = C_MALLOC(sizeof(elm) * (da).capacity);\
 		}\
 		if ((da).count + 1 > (da).capacity) {\
 			(da).capacity *= 2;\
-			if (DEBUG) log_info("%s realloced!", #da);\
-			ASSERT(C_REALLOC((da).items, (da).capacity * sizeof(*(da).items)) != NULL, "TODO: Log error instead of asserting");\
+			c_ASSERT(C_REALLOC((da).items, (da).capacity * sizeof(*(da).items)) != NULL, "TODO: Log error instead of asserting");\
 		}\
 		(da).items[(da).count++] = elm;\
 	} while (0)
