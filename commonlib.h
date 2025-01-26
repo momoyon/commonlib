@@ -101,10 +101,10 @@ typedef struct c_Arena c_Arena;
 //    [extra fields...];
 // }
 // ```
-// #define DEFINE_DYNAMIC_ARRAY(struct_name, elm_type) typedef struct {\
-//         elm_type *items;\
-//         size_t count;\
-//         size_t capacity;\
+// #define DEFINE_DYNAMIC_ARRAY(struct_name, elm_type) typedef struct {
+//         elm_type *items;
+//         size_t count;
+//         size_t capacity;
 //     }
 
 #define c_DYNAMIC_ARRAY_INITIAL_CAPACITY (sizeof(size_t))
