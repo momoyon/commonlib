@@ -80,7 +80,6 @@ typedef const wchar* wstr;
 
 typedef struct c_Arena c_Arena;
 
-
 //
 // ## Data Structures
 //
@@ -273,7 +272,6 @@ void c_os_get_timedate(c_Arena* a) {
 
 bool c_os_file_exists(cstr filename) {
         struct stat buf;
-        c_ASSERT(false, "Unimplemented!");
         return stat(filename, &buf) == 0;
 }
 #endif
