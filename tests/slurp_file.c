@@ -1,4 +1,3 @@
-
 #define COMMONLIB_IMPLEMENTATION
 #include "../commonlib.h"
 
@@ -10,7 +9,6 @@ int main(void) {
 
     c_log_info("buff: '%s'", buff);
     
-    C_FREE(buff);
-
+    // We don't care about leaking memory since we are just exiting right away!
     return 0;
 }

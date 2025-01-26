@@ -59,7 +59,12 @@ def hhelp():
 
     Flags:
         -h      - Same as the help subcommand.
+        -v      - Verbose output.
           ''')
+
+def vlog(verbose_output, msg):
+    if verbose_output:
+        print(msg)
 
 def main():
     program = sys.argv.pop(0)
@@ -70,7 +75,11 @@ def main():
         hhelp()
         exit(1)
 
+
     flags = []
+
+    # FLAG_VALUES
+    verbose_output = False
 
     subcmds = []
 
@@ -88,6 +97,8 @@ def main():
         if flag == 'h':
             hhelp()
             exit(0)
+        elif flag == 'v':
+            verbose_output = True
         else:
             print(f"[ERROR] Invalid flag '{flag}'", file=sys.stderr)
             exit(1)
@@ -112,7 +123,8 @@ def main():
 
     for subcmd in subcmds:
         total_tests_count = len(tests)
-        current_test_id = -1
+        current_test_id = 0
+        passing_tests_count = 0
 
         if subcmd == "help":
             hhelp()
@@ -120,11 +132,13 @@ def main():
         elif subcmd == "build":
             print(f'----- [BUILD] -----')
             for test_name in tests:
-                current_test_id += 1
                 print(f'+ Building {test_name} [{current_test_id+1}/{total_tests_count}]...')
+                current_test_id += 1
                 test = tests[test_name]
 
-                res = subprocess.run([CC, '-o', test_name, f"{test_name}.c"],
+                cmd = [CC, '-o', test_name, f"{test_name}.c"]
+                vlog(verbose_output, f"[CMD] {cmd}")
+                res = subprocess.run(cmd,
                                      capture_output = True,
                                      text = True)
                 if res.returncode != 0:
@@ -135,23 +149,30 @@ def main():
                         print('')
                     continue
                 else:
+                    passing_tests_count += 1
                     print("[PASS] ", end='')
+                    o = False
                     if res.stdout:
                         print(f"{res.stdout}")
-                    else:
-                        print('')
-            if current_test_id == total_tests_count-1:
-                print("ALL TESTS BUILD")
+                        o = True
+                    if verbose_output and res.stderr:
+                        print(f"{res.stderr}")
+                        o = True
+                    if not o: print('')
+
+                print(f"Build {passing_tests_count}/{total_tests_count} tests")
         elif subcmd == "run":
             print(f'----- [RUN] -----')
             for test_name in tests:
-                current_test_id += 1
                 print(f'+ Running {test_name} [{current_test_id+1}/{total_tests_count}]...')
+                current_test_id += 1
                 test = tests[test_name]
 
                 res = None
                 try:
-                    res = subprocess.run([f"./{test_name}"], capture_output = True, text = True)
+                    cmd = [f"./{test_name}"]
+                    vlog(verbose_output, f"[CMD] {cmd}")
+                    res = subprocess.run(cmd, capture_output = True, text = True)
                 except Exception as e:
                     print(f"[ERROR] Failed to run ./{test_name}: {e}")
                     continue
@@ -165,9 +186,10 @@ def main():
                     print(f"Expected: >>>{test.expected_stdout}>>>")
                     print(f"But Got: >>>{res.stdout}>>>")
                     continue
+                passing_tests_count += 1
                 print('[PASS]')
-            if current_test_id == total_tests_count-1:
-                print("ALL TESTS PASS")
+
+            print(f"PASSED {passing_tests_count}/{total_tests_count}")
         elif subcmd == "record":
             print(f'----- [RECORD] -----')
             for test_name in tests:
