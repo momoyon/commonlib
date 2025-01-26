@@ -13,14 +13,15 @@
 #define C_FREE free
 #define C_REALLOC realloc
 #define C_MEMCPY memcpy
+#define C_MEMCMP memcmp
 
 // Remove Prefix
 #ifdef COMMONLIB_REMOVE_PREFIX
 #define ASSERT c_ASSERT
 #define ARRAY_LEN c_ARRAY_LEN
 
-#define c_da_append
-#define c_DYNAMIC_ARRAY_INITIAL_CAPACITY
+#define da_append c_da_append
+#define DYNAMIC_ARRAY_INITIAL_CAPACITY c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 // #define c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 
 #define os_get_timedate c_os_get_timedate
@@ -122,6 +123,35 @@ typedef struct c_Arena c_Arena;
 		}\
 		(da).items[(da).count++] = elm;\
 	} while (0)
+
+//
+// Queue
+//
+
+// Queue struct:
+// ```c
+// typedef struct {
+//     <item-type> items;
+//     size_t count;
+//     size_t capacity;
+//    [extra fields...];
+// } 
+
+typedef struct {
+    void *items;
+    size_t count;
+    size_t capacity;
+} C_Queue;
+
+#define c_qu_append c_da_append
+
+#define qu_has(qu, value, ret) do {\
+        ret = false;\
+        for (int i = 0; i < (qu).count; ++i) {\
+            if (C_MEMCMP(&((qu).items[i]), &(value), sizeof(*((qu).items)) == 0)) { ret = true; break; }\
+        }\
+    } while (0)
+bool c_qu_has(C_Queue *qu, void *value, size_t item_size);
 
 //
 // OS
@@ -248,6 +278,18 @@ cstr c_shift_args(int* argc, char*** argv);
 #include <stdlib.h>
 
 // My things implementation:
+
+//
+// Queue
+//
+
+bool c_qu_has(C_Queue *qu, void *value, size_t item_size) {
+    for (int i = 0; i < qu->count; ++i) {
+        void *item = (char *)qu->items + (i * item_size);
+        if (C_MEMCMP(item, value, item_size) == 0) return true;
+    }
+    return false;
+}
 
 //
 // OS
