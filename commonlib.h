@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 
 // Memory allocation
 #define C_MALLOC malloc
@@ -67,6 +68,8 @@ typedef wchar_t wchar;
 typedef const char*  cstr;
 typedef const wchar* wstr;
 
+
+// Macros
 #define c_ASSERT(condition, msg) do {\
                 if (!(condition)) {\
                         fprintf(stderr, "%s:%d:0 [ASSERTION FAILED] %s: %s", __FILE__, __LINE__, #condition, msg);\
@@ -75,6 +78,9 @@ typedef const wchar* wstr;
         } while (0)
 
 #define c_ARRAY_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
+
+#define c_pop_front(xs, xsz) (assert(xsz > 0 && "Array is empty"), xsz--, *xs++)
+#define c_shift_args c_pop_front
 
 //
 // Struct pre-decls
@@ -124,6 +130,8 @@ typedef struct c_Arena c_Arena;
 		}\
 		(da).items[(da).count++] = elm;\
 	} while (0)
+
+#define c_da_pop_front(da) (c_ASSERT(da.count > 0, "Array is empty"), da.count--, *da.items++)
 
 //
 // OS
@@ -234,12 +242,6 @@ float32 c_sv_to_float(c_String_view sv);
 bool c_sv_contains_char(c_String_view sv, char ch);
 bool c_sv_is_hex_numbers(c_String_view sv);
 bool c_sv_equals(c_String_view sv1, c_String_view sv2);
-
-//
-// Args
-//
-
-cstr c_shift_args(int* argc, char*** argv);
 
 #endif /* _COMMONLIB_H_ */
 
@@ -615,20 +617,6 @@ bool c_sv_equals(c_String_view sv1, c_String_view sv2) {
     }
 
     return true;
-}
-
-
-//
-// Args
-//
-
-cstr c_shift_args(int* argc, char*** argv) {
-    if (*argc <= 0) return NULL;
-
-    cstr res = *(argv)[0];
-    *argv = (*argv) + 1;
-    *argc = (*argc) - 1;
-    return res;
 }
 
 #endif
