@@ -60,6 +60,7 @@ def hhelp():
     Flags:
         -h      - Same as the help subcommand.
         -v      - Verbose output.
+        -x      - Stop on first error.
           ''')
 
 def vlog(verbose_output, msg):
@@ -80,6 +81,7 @@ def main():
 
     # FLAG_VALUES
     verbose_output = False
+    stop_on_error  = False
 
     subcmds = []
 
@@ -99,6 +101,8 @@ def main():
             exit(0)
         elif flag == 'v':
             verbose_output = True
+        elif flag == 'x':
+            stop_on_error = True
         else:
             print(f"[ERROR] Invalid flag '{flag}'", file=sys.stderr)
             exit(1)
@@ -147,7 +151,8 @@ def main():
                         print(f"{res.stderr}")
                     else:
                         print('')
-                    continue
+                    if stop_on_error: exit(1)
+                    else: continue
                 else:
                     passing_tests_count += 1
                     print("[PASS] ", end='')
@@ -175,7 +180,8 @@ def main():
                     res = subprocess.run(cmd, capture_output = True, text = True)
                 except Exception as e:
                     print(f"[ERROR] Failed to run ./{test_name}: {e}")
-                    continue
+                    if stop_on_error: exit(1)
+                    else: continue
 
                 if test.expected_returncode == -1:
                     print(f"[WARNING] Test doesn't have any expected returncode!")
@@ -185,7 +191,8 @@ def main():
                     print('[FAILED]', file=sys.stderr)
                     print(f"Expected: >>>{test.expected_stdout}>>>")
                     print(f"But Got: >>>{res.stdout}>>>")
-                    continue
+                    if stop_on_error: exit(1)
+                    else: continue
                 passing_tests_count += 1
                 print('[PASS]')
 
