@@ -43,6 +43,8 @@
 
 #define String_view c_String_view
 
+#define shift_args c_shift_args
+
 #endif // COMMONLIB_REMOVE_PREFIX
 
 // typedefs
