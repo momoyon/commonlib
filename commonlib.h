@@ -21,6 +21,7 @@
 #define ARRAY_LEN c_ARRAY_LEN
 
 #define da_append c_da_append
+#define da_free c_da_free
 #define DYNAMIC_ARRAY_INITIAL_CAPACITY c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 // #define c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 
@@ -164,6 +165,7 @@ typedef struct c_Arena c_Arena;
 	} while (0)
 
 #define c_da_pop_front(da) (c_ASSERT(da.count > 0, "Array is empty"), da.count--, *da.items++)
+#define c_da_free(da) C_FREE(da.items)
 
 //
 // OS
