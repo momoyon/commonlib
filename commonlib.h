@@ -9,12 +9,6 @@
 #include <ctype.h>
 #include <assert.h>
 
-// Memory allocation
-#define C_MALLOC malloc
-#define C_FREE free
-#define C_REALLOC realloc
-#define C_MEMCPY memcpy
-
 // Remove Prefix
 #ifdef COMMONLIB_REMOVE_PREFIX
 #define ASSERT c_ASSERT
@@ -80,6 +74,21 @@
 
 
 #endif // COMMONLIB_REMOVE_PREFIX
+
+// Memory allocation
+#ifndef C_MALLOC
+#define C_MALLOC malloc
+#endif
+#ifndef C_FREE
+#define C_FREE free
+#endif
+#ifndef C_REALLOC
+#define C_REALLOC realloc
+#endif
+#ifndef C_MEMCPY
+#define C_MEMCPY memcpy
+#endif
+
 
 // typedefs
 typedef unsigned int uint;
