@@ -495,7 +495,7 @@ c_String_view c_sv_lpop_until_string(c_String_view* sv, const char *string) {
 
     while (sv->count > string_len) {
         bool matched = true;
-        for (int i = 0; i < string_len; ++i) {
+        for (size_t i = 0; i < string_len; ++i) {
             if (sv->data[i] != string[i]) matched = false;
         }
         if (matched) break;
