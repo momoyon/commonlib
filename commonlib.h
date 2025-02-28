@@ -256,7 +256,7 @@ typedef struct {
 } c_String_view;
 
 #define c_SV_FMT "%.*s"
-#define c_SV_ARG(sv) (int)sv.count, sv.data
+#define c_SV_ARG(sv) (int)(sv).count, (sv).data
 
 #define c_SV(cstr) (c_String_view){.data = cstr, strlen(cstr)}
 
