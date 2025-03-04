@@ -175,7 +175,8 @@ typedef struct c_Arena c_Arena;
 		(da).items[(da).count++] = elm;\
 	} while (0)
 
-#define c_da_shift(da) (c_ASSERT(da.count > 0, "Array is empty"), da.count--, *da.items++)
+// NOTE: We cant do c_ASSERT() here because it aint one expression...
+#define c_da_shift(da) (assert(da.count > 0 && "Array is empty"), da.count--, *da.items++)
 #define c_da_free(da) C_FREE(da.items)
 
 //
@@ -296,6 +297,7 @@ bool c_sv_equals(c_String_view sv1, c_String_view sv2);
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <assert.h>
 
 // My things implementation:
 
