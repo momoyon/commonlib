@@ -16,6 +16,7 @@
 
 #define da_append c_da_append
 #define da_free c_da_free
+#define da_shift c_da_shift
 #define DYNAMIC_ARRAY_INITIAL_CAPACITY c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 // #define c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 
@@ -122,8 +123,8 @@ typedef const wchar* wstr;
 
 #define c_ARRAY_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
-#define c_pop_front(xs, xsz) (assert(xsz > 0 && "Array is empty"), xsz--, *xs++)
-#define c_shift_args c_pop_front
+#define c_shift(xs, xsz) (assert(xsz > 0 && "Array is empty"), xsz--, *xs++)
+#define c_shift_args c_shift
 
 //
 // Struct pre-decls
@@ -174,7 +175,7 @@ typedef struct c_Arena c_Arena;
 		(da).items[(da).count++] = elm;\
 	} while (0)
 
-#define c_da_pop_front(da) (c_ASSERT(da.count > 0, "Array is empty"), da.count--, *da.items++)
+#define c_da_shift(da) (c_ASSERT(da.count > 0, "Array is empty"), da.count--, *da.items++)
 #define c_da_free(da) C_FREE(da.items)
 
 //
