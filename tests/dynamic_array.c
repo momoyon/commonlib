@@ -19,5 +19,11 @@ int main(void) {
         c_log_info("%d", da.items[i]);
     }
 
+    c_da_append(da, 2);
+
+    // NOTE: da_shift
+    int a = c_da_shift(da);
+
+    c_ASSERT(a == 6, "da_shift did not return correct value");
     return 0;
 }
