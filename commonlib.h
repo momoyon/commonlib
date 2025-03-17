@@ -176,8 +176,8 @@ typedef struct c_Arena c_Arena;
 	} while (0)
 
 // NOTE: We cant do c_ASSERT() here because it aint one expression...
-#define c_da_shift(da) (assert(da.count > 0 && "Array is empty"), da.count--, *da.items++)
-#define c_da_free(da) C_FREE(da.items)
+#define c_da_shift(da) (assert((da).count > 0 && "Array is empty"), (da).count--, *(da).items++)
+#define c_da_free(da) C_FREE((da).items)
 
 //
 // OS
