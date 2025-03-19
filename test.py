@@ -18,22 +18,22 @@ RUN_CMD="NOT SET"
 # The name of the directory all the tests live in. (Will chdir to this)
 TESTS_DIR="NOT SET"
 # Suffix of the source files the build command iw (if there is a . prefix, it will be removed
-SRC_FILE_SUFFIX="NOT SET"
+SRC_SUFFIX="NOT SET"
 
 def get_env_variables():
-    global BUILD_CMD, RUN_CMD, TESTS_DIR, SRC_FILE_SUFFIX
+    global BUILD_CMD, RUN_CMD, TESTS_DIR, SRC_SUFFIX
     BUILD_CMD = os.environ["BUILD_CMD"] if "BUILD_CMD" in os.environ else "NOT SET"
     RUN_CMD = os.environ["RUN_CMD"] if "RUN_CMD" in os.environ else "NOT SET"
     TESTS_DIR = os.environ["TESTS_DIR"] if "TESTS_DIR" in os.environ else "NOT SET"
-    SRC_FILE_SUFFIX = os.environ["SRC_FILE_SUFFIX"] if "SRC_FILE_SUFFIX" in os.environ else "NOT SET"
-    SRC_FILE_SUFFIX = SRC_FILE_SUFFIX.removeprefix(".")
-    # SRC_FILE_SUFFIX = os.environ["SRC_FILE_SUFFIX"] if "SRC_FILE_SUFFIXsuffix" in os.environ else "NOT SET"
+    SRC_SUFFIX = os.environ["SRC_SUFFIX"] if "SRC_SUFFIX" in os.environ else "NOT SET"
+    SRC_SUFFIX = SRC_SUFFIX.removeprefix(".")
+    # SRC_SUFFIX = os.environ["SRC_SUFFIX"] if "SRC_SUFFIXsuffix" in os.environ else "NOT SET"
 
 
 def get_cmd_substituted(cmd, tests, current_test):
     assert current_test in tests, "The test that you passed is not in the tests map!"
     cmd = cmd.replace("{test_name}", tests[current_test].name)
-    cmd = cmd.replace("{src_suffix}", SRC_FILE_SUFFIX)
+    cmd = cmd.replace("{src_suffix}", SRC_SUFFIX)
 
     return cmd
 
@@ -117,6 +117,13 @@ class Test:
                     build_input_array.pop(i)
             return build_input_array
 
+    def get_stdin_list(self):
+            input_array = self.stdin.split(sep=' ')
+            for i in range(len(input_array)-1, -1, -1):
+                if len(input_array[i]) <= 0:
+                    input_array.pop(i)
+            return input_array
+
 def usage(program: str):
     print(f"Usage: {program} <subcmd> [flags]")
 
@@ -188,10 +195,8 @@ def main():
 
     get_env_variables()
 
-    check_crucial_envvar(BUILD_CMD, "BUILD_CMD")
-    check_crucial_envvar(RUN_CMD, "RUN_CMD")
     check_crucial_envvar(TESTS_DIR, "TESTS_DIR")
-    check_crucial_envvar(SRC_FILE_SUFFIX, "SRC_FILE_SUFFIX")
+    check_crucial_envvar(SRC_SUFFIX, "SRC_SUFFIX")
 
     os.chdir(TESTS_DIR)
     vlog(verbose_output, f"[INFO] Changed cwd to {os.getcwd()}")
@@ -199,15 +204,15 @@ def main():
     tests = {}
 
     for e in sorted(os.listdir(os.getcwd())):
-        if not e.endswith("." + SRC_FILE_SUFFIX): continue
-        base_name = e.removesuffix("." + SRC_FILE_SUFFIX)
+        if not e.endswith("." + SRC_SUFFIX): continue
+        base_name = e.removesuffix("." + SRC_SUFFIX)
         if not tests.get(base_name):
             tests[base_name] = Test(base_name)
 
-    print(f"BUILD_CMD: {BUILD_CMD}")
-    print(f"RUN_CMD: {RUN_CMD}")
-    print(f"TESTS_DIR: {TESTS_DIR}")
-    print(f"SRC_FILE_SUFFIX: {SRC_FILE_SUFFIX}")
+    # print(f"BUILD_CMD: {BUILD_CMD}")
+    # print(f"RUN_CMD: {RUN_CMD}")
+    # print(f"TESTS_DIR: {TESTS_DIR}")
+    # print(f"SRC_SUFFIX: {SRC_SUFFIX}")
 
     for subcmd in subcmds:
         total_tests_count = len(tests)
@@ -218,6 +223,7 @@ def main():
             hhelp()
             exit(0)
         elif subcmd == "build":
+            check_crucial_envvar(BUILD_CMD, "BUILD_CMD")
             print(f'----- [BUILD] -----')
             for test_name in tests:
                 print(f'+ Building {test_name} [{current_test_id+1}/{total_tests_count}]...')
@@ -231,7 +237,7 @@ def main():
                     if stop_on_error: exit(1)
                     continue
 
-                cmd = [COMPILER, f"{test_name}{SUFFIX}"]
+                cmd = shlex.split(get_cmd_substituted(BUILD_CMD, tests, test_name))
                 build_stdin_list = test.get_build_stdin_list()
                 if len(build_stdin_list) > 0: cmd.extend(build_stdin_list)
                 vlog(verbose_output, f"[CMD] {cmd}")
@@ -268,7 +274,7 @@ def main():
 
                 print(f"Build {passing_tests_count}/{total_tests_count} tests")
         elif subcmd == "run":
-            assert False, "'run' Subcommand is not fully tested!"
+            check_crucial_envvar(RUN_CMD, "RUN_CMD")
             print(f'----- [RUN] -----')
             for test_name in tests:
                 print(f'+ Running {test_name} [{current_test_id+1}/{total_tests_count}]...')
@@ -277,7 +283,7 @@ def main():
 
                 res = None
                 try:
-                    cmd = [f"./{test_name}"]
+                    cmd = shlex.split(get_cmd_substituted(RUN_CMD, tests, test_name))
                     vlog(verbose_output, f"[CMD] {cmd}")
                     res = subprocess.run(cmd, capture_output = True, text = True)
                 except Exception as e:
@@ -300,12 +306,16 @@ def main():
 
             print(f"PASSED {passing_tests_count}/{total_tests_count}")
         elif subcmd == "record":
-            assert False, "'record' Subcommand is not fully tested!"
+            check_crucial_envvar(RUN_CMD, "RUN_CMD")
             print(f'----- [RECORD] -----')
             for test_name in tests:
                 print(f"+ Recording expected behaviour for '{test_name}'...")
                 test = tests[test_name]
 
+                cmd = shlex.split(get_cmd_substituted(RUN_CMD, tests, test_name))
+                stdin_list = test.get_stdin_list()
+                if len(stdin_list) > 0: cmd.extend(stdin_list)
+                vlog(verbose_output, f"[CMD] {cmd}")
                 res = subprocess.run([f"./{test_name}"], capture_output = True, text = True)
 
                 print(f"stdout: {res.stdout}")
@@ -324,6 +334,7 @@ def main():
                 else:
                     print('[SKIP]')
         elif subcmd == "record_build":
+            check_crucial_envvar(BUILD_CMD, "BUILD_CMD")
             print(f'----- [RECORD_BUILD] -----')
             for test_name in tests:
                 print(f"+ Recording expected build behaviour for '{test_name}'...")
@@ -334,11 +345,13 @@ def main():
                     ans = input("Do you want to change the build_input? [y/N]")
                     if ans.lower() == 'y':
                         test.build_stdin = input("What is the input passed? ")
+                    else:
+                        print("[SKIPPING]...")
+                        continue
                 else:
                     test.build_stdin = input("What is the input passed? ")
 
-
-                cmd = [COMPILER, f"{test_name}{SUFFIX}"]
+                cmd = shlex.split(get_cmd_substituted(BUILD_CMD, tests, test_name))
                 build_stdin_list = test.get_build_stdin_list()
                 if len(build_stdin_list) > 0: cmd.extend(build_stdin_list)
                 vlog(verbose_output, f"[CMD] {cmd}")
