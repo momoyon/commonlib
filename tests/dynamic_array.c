@@ -10,6 +10,8 @@ typedef struct {
 int main(void) {
     Dynamic_Array da = {0};
 
+    c_da_append(da, 6);
+
     for (int i = 0; i < 100; ++i) {
         if (i % 2 == 0) c_da_append(da, i);
     }
@@ -19,7 +21,6 @@ int main(void) {
         c_log_info("%d", da.items[i]);
     }
 
-    c_da_append(da, 2);
 
     // NOTE: da_shift
     int a = c_da_shift(da);

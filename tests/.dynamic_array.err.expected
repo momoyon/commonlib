@@ -1,1 +1,0 @@
-dynamic_array.c:27:0 [ASSERTION FAILED] a == 6: da_shift did not return correct value
