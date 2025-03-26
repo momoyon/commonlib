@@ -2,9 +2,9 @@
 #include "../commonlib.h"
 
 int main(void) {
-    c_Arena a = c_Arena_make(0);
+    c_Arena a = c_arena_make(0);
 
-    c_Arena_free(&a);
+    c_arena_free(&a);
 
     return 0;
 }
