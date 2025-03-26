@@ -607,8 +607,12 @@ void c_sv_trim(c_String_view* sv){
 }
 
 char* c_sv_to_cstr(c_String_view sv){
-    char* res = (char*)calloc(1, sizeof(char)*sv.count);
+    char* res = (char*)malloc(sizeof(char)*(sv.count + 1));
+    if (res == NULL) {
+        C_ASSERT(false, "Buy more RAM bruh");
+    }
     C_MEMCPY(res, sv.data, sv.count);
+    res[sv.count] = '\0';
     return res;
 }
 
