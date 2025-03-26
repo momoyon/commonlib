@@ -25,6 +25,6 @@ int main(void) {
     // NOTE: da_shift
     int a = c_da_shift(da);
 
-    c_ASSERT(a == 6, "da_shift did not return correct value");
+    C_ASSERT(a == 6, "da_shift did not return correct value");
     return 0;
 }
