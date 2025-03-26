@@ -22,5 +22,14 @@ int main(void) {
 
     log_info("mc: '"SV_FMT"'", SV_ARG(mc));
 
+
+    String_view foo = SV("Hello Mister");
+
+    char *cstr = sv_to_cstr(foo);
+
+    log_info("cstr from sv: "SV_FMT" -> %s", SV_ARG(foo), cstr);
+
+    C_FREE(cstr);
+
     return 0;
 }
