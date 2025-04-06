@@ -335,7 +335,7 @@ bool c_os_file_exists(cstr filename) {
     goto defer
 
 const char *c_slurp_file(const char* filename, int *file_size) {
-    FILE* f = fopen(filename, "rb");
+    FILE* f = fopen(filename, "r");
     char* result = NULL;
 
     if (f == NULL){
@@ -355,8 +355,6 @@ const char *c_slurp_file(const char* filename, int *file_size) {
         defer(NULL);
     }
 
-    *file_size = (int)fsize;
-
     result = C_MALLOC(sizeof(char)*(fsize+1));
 
     if (result == NULL){
@@ -369,13 +367,12 @@ const char *c_slurp_file(const char* filename, int *file_size) {
         defer(NULL);
     }
 
-    if (fread((char*)result, sizeof(char), fsize, f) != fsize){
-        c_log_error("'%s': %s", filename, strerror(errno));
-        defer(NULL);
-    }
+    size_t read = fread((char*)result, sizeof(char), fsize, f);
+
+    *file_size = (int)read;
 
     // set null-terminator
-    result[fsize] = '\0';
+    result[read] = '\0';
 
  defer:
     if (f) fclose(f);
