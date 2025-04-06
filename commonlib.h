@@ -208,8 +208,8 @@ bool c_os_file_exists(cstr filename);
 // File
 //
 
-// reads entire file and gives back the string holding the contents. (caller must be responsible for freeing the string!)
-const char* c_slurp_file(const char* filename, bool* success);
+// reads entire file and gives back the file content and filesize in bytes. (caller must be responsible for freeing the string!)
+const char* c_slurp_file(const char* filename, int *file_size);
 void c_touch_file_if_doesnt_exist(cstr file);
 
 //
@@ -334,7 +334,7 @@ bool c_os_file_exists(cstr filename) {
     result = ret_val;\
     goto defer
 
-const char *c_slurp_file(const char* filename, bool* success) {
+const char *c_slurp_file(const char* filename, int *file_size) {
     FILE* f = fopen(filename, "rb");
     char* result = NULL;
 
@@ -354,6 +354,8 @@ const char *c_slurp_file(const char* filename, bool* success) {
         c_log_error("'%s': %s", filename, strerror(errno));
         defer(NULL);
     }
+
+    *file_size = (int)fsize;
 
     result = C_MALLOC(sizeof(char)*(fsize+1));
 
@@ -377,7 +379,7 @@ const char *c_slurp_file(const char* filename, bool* success) {
 
  defer:
     if (f) fclose(f);
-    *success = result != NULL;
+    if (result == NULL) *file_size = -1;
     return result;
 }
 
