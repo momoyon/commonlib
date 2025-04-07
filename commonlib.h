@@ -27,7 +27,7 @@
 #define log_info c_log_info
 #define log_warning c_log_warning
 
-#define slurp_file c_slurp_file
+#define read_file c_read_file
 #define touch_file_if_doesnt_exist c_touch_file_if_doesnt_exist
 
 #define Arena c_Arena
@@ -209,7 +209,7 @@ bool c_os_file_exists(cstr filename);
 //
 
 // reads entire file and gives back the file content and filesize in bytes. (caller must be responsible for freeing the string!)
-const char* c_slurp_file(const char* filename, int *file_size);
+const char* c_read_file(const char* filename, int *file_size);
 void c_touch_file_if_doesnt_exist(cstr file);
 
 //
@@ -334,7 +334,7 @@ bool c_os_file_exists(cstr filename) {
     result = ret_val;\
     goto defer
 
-const char *c_slurp_file(const char* filename, int *file_size) {
+const char *c_read_file(const char* filename, int *file_size) {
     FILE* f = fopen(filename, "r");
     char* result = NULL;
 
