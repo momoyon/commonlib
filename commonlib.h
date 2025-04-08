@@ -8,6 +8,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <limits.h>
 
 // Remove Prefix
 #ifdef COMMONLIB_REMOVE_PREFIX
@@ -66,7 +67,7 @@
 #define sv_trim c_sv_trim
 #define sv_to_cstr c_sv_to_cstr
 #define sv_to_int c_sv_to_int
-#define sv_to_uint64 c_sv_to_uint64
+#define sv_to_uint c_sv_to_uint
 #define sv_to_uint8_hex c_sv_to_uint8_hex
 #define sv_to_ptr c_sv_to_ptr
 #define sv_to_float c_sv_to_float
@@ -281,11 +282,10 @@ void c_sv_ltrim(c_String_view* sv);
 void c_sv_rtrim(c_String_view* sv);
 void c_sv_trim(c_String_view* sv);
 char* c_sv_to_cstr(c_String_view sv);
-int32 c_sv_to_int(c_String_view sv);
-uint64 c_sv_to_uint64(c_String_view sv);
-uint8 c_sv_to_uint8_hex(c_String_view sv);
-void* c_sv_to_ptr(c_String_view sv);
-float32 c_sv_to_float(c_String_view sv);
+int64 c_sv_to_int(c_String_view sv, int *count, int base);
+uint64 c_sv_to_uint(c_String_view sv, int *count, int base);
+void* c_sv_to_ptr(c_String_view sv, int *count, int base);
+float64 c_sv_to_float(c_String_view sv, int *count);
 bool c_sv_contains_char(c_String_view sv, char ch);
 bool c_sv_is_hex_numbers(c_String_view sv);
 bool c_sv_equals(c_String_view sv1, c_String_view sv2);
@@ -615,37 +615,59 @@ char* c_sv_to_cstr(c_String_view sv){
     return res;
 }
 
-// TODO: check for failure of conversion. returns 0/0.0 on failure, so just check if the str contains zero.
-int32 c_sv_to_int(c_String_view sv) {
-    char* str = c_sv_to_cstr(sv);
-    int32 res = atoi(str);
+int64 c_sv_to_int(c_String_view sv, int *count_out, int base) {
+    char *str = c_sv_to_cstr(sv);
+
+    char *endptr = NULL;
+
+    int64 res = strtol(str, &endptr, base);
+
+    if (endptr == str) {
+        *count_out = -1;
+        return res;
+    }
+
+    *count_out = (int)(endptr - str);
+
     C_FREE(str);
     return res;
 }
 
-uint64 c_sv_to_uint64(c_String_view sv) {
+uint64 c_sv_to_uint(c_String_view sv, int *count, int base) {
     char* str = c_sv_to_cstr(sv);
-    uint64 res = (uint64)atoll(str);
+
+    char *endptr = NULL;
+    uint64 res = strtoul(str, &endptr, base);
+
+    if (endptr == str) {
+        *count = -1;
+        return res;
+    }
+
+    *count = (int)(endptr - str);
+
     C_FREE(str);
     return res;
 }
 
-uint8 c_sv_to_uint8_hex(c_String_view sv) {
+float64 c_sv_to_float(c_String_view sv, int *count) {
     char* str = c_sv_to_cstr(sv);
-    char* end = str + sv.count;
-    uint8 res = (uint8)strtol(str, &end, 16);
+
+    char *endptr = NULL;
+    float64 res = strtod(str, &endptr);
+
+    if (endptr == str) {
+        *count = -1;
+        return res;
+    }
+
+    *count = (int)(endptr - str);
+
     C_FREE(str);
     return res;
 }
 
-float32 c_sv_to_float(c_String_view sv) {
-    char* str = c_sv_to_cstr(sv);
-    float32 res = (float32)atof(str);
-    C_FREE(str);
-    return res;
-}
-
-void*    c_sv_to_ptr(c_String_view sv) {
+void* c_sv_to_ptr(c_String_view sv, int *count, int base) {
     char* str = c_sv_to_cstr(sv);
     char* end = NULL;
     void* res = (void*)strtoull(str, &end, 16);
