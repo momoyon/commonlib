@@ -8,6 +8,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <limits.h>
 
 // Remove Prefix
 #ifdef COMMONLIB_REMOVE_PREFIX
@@ -27,7 +28,7 @@
 #define log_info c_log_info
 #define log_warning c_log_warning
 
-#define slurp_file c_slurp_file
+#define read_file c_read_file
 #define touch_file_if_doesnt_exist c_touch_file_if_doesnt_exist
 
 #define Arena c_Arena
@@ -66,9 +67,8 @@
 #define sv_trim c_sv_trim
 #define sv_to_cstr c_sv_to_cstr
 #define sv_to_int c_sv_to_int
-#define sv_to_uint64 c_sv_to_uint64
+#define sv_to_uint c_sv_to_uint
 #define sv_to_uint8_hex c_sv_to_uint8_hex
-#define sv_to_ptr c_sv_to_ptr
 #define sv_to_float c_sv_to_float
 #define sv_contains_char c_sv_contains_char
 #define sv_is_hex_numbers c_sv_is_hex_numbers
@@ -125,6 +125,13 @@ typedef const wchar* wstr;
 
 #define c_shift(xs, xsz) (assert(xsz > 0 && "Array is empty"), xsz--, *xs++)
 #define c_shift_args c_shift
+
+//
+// Math
+//
+
+int clampi(int v, int min, int max);
+float clampf(float v, float min, float max);
 
 //
 // Struct pre-decls
@@ -209,7 +216,7 @@ bool c_os_file_exists(cstr filename);
 //
 
 // reads entire file and gives back the file content and filesize in bytes. (caller must be responsible for freeing the string!)
-const char* c_slurp_file(const char* filename, int *file_size);
+const char* c_read_file(const char* filename, int *file_size);
 void c_touch_file_if_doesnt_exist(cstr file);
 
 //
@@ -281,11 +288,9 @@ void c_sv_ltrim(c_String_view* sv);
 void c_sv_rtrim(c_String_view* sv);
 void c_sv_trim(c_String_view* sv);
 char* c_sv_to_cstr(c_String_view sv);
-int32 c_sv_to_int(c_String_view sv);
-uint64 c_sv_to_uint64(c_String_view sv);
-uint8 c_sv_to_uint8_hex(c_String_view sv);
-void* c_sv_to_ptr(c_String_view sv);
-float32 c_sv_to_float(c_String_view sv);
+int64 c_sv_to_int(c_String_view sv, int *count, int base);
+uint64 c_sv_to_uint(c_String_view sv, int *count, int base);
+float64 c_sv_to_float(c_String_view sv, int *count);
 bool c_sv_contains_char(c_String_view sv, char ch);
 bool c_sv_is_hex_numbers(c_String_view sv);
 bool c_sv_equals(c_String_view sv1, c_String_view sv2);
@@ -300,6 +305,22 @@ bool c_sv_equals(c_String_view sv1, c_String_view sv2);
 #include <assert.h>
 
 // My things implementation:
+
+//
+// Math
+//
+
+int clampi(int v, int min, int max) {
+    v = v < min ? min : v;
+    v = v > max ? max : v;
+    return v;
+}
+
+float clampf(float v, float min, float max) {
+    v = v < min ? min : v;
+    v = v > max ? max : v;
+    return v;
+}
 
 //
 // OS
@@ -334,7 +355,7 @@ bool c_os_file_exists(cstr filename) {
     result = ret_val;\
     goto defer
 
-const char *c_slurp_file(const char* filename, int *file_size) {
+const char *c_read_file(const char* filename, int *file_size) {
     FILE* f = fopen(filename, "r");
     char* result = NULL;
 
@@ -615,40 +636,54 @@ char* c_sv_to_cstr(c_String_view sv){
     return res;
 }
 
-// TODO: check for failure of conversion. returns 0/0.0 on failure, so just check if the str contains zero.
-int32 c_sv_to_int(c_String_view sv) {
-    char* str = c_sv_to_cstr(sv);
-    int32 res = atoi(str);
+int64 c_sv_to_int(c_String_view sv, int *count_out, int base) {
+    char *str = c_sv_to_cstr(sv);
+
+    char *endptr = NULL;
+
+    int64 res = strtol(str, &endptr, base);
+
+    if (endptr == str) {
+        *count_out = -1;
+        return res;
+    }
+
+    *count_out = (int)(endptr - str);
+
     C_FREE(str);
     return res;
 }
 
-uint64 c_sv_to_uint64(c_String_view sv) {
+uint64 c_sv_to_uint(c_String_view sv, int *count, int base) {
     char* str = c_sv_to_cstr(sv);
-    uint64 res = (uint64)atoll(str);
+
+    char *endptr = NULL;
+    uint64 res = strtoul(str, &endptr, base);
+
+    if (endptr == str) {
+        *count = -1;
+        return res;
+    }
+
+    *count = (int)(endptr - str);
+
     C_FREE(str);
     return res;
 }
 
-uint8 c_sv_to_uint8_hex(c_String_view sv) {
+float64 c_sv_to_float(c_String_view sv, int *count) {
     char* str = c_sv_to_cstr(sv);
-    char* end = str + sv.count;
-    uint8 res = (uint8)strtol(str, &end, 16);
-    C_FREE(str);
-    return res;
-}
 
-float32 c_sv_to_float(c_String_view sv) {
-    char* str = c_sv_to_cstr(sv);
-    float32 res = (float32)atof(str);
-    C_FREE(str);
-    return res;
-}
+    char *endptr = NULL;
+    float64 res = strtod(str, &endptr);
 
-void*    c_sv_to_ptr(c_String_view sv) {
-    char* str = c_sv_to_cstr(sv);
-    char* end = NULL;
-    void* res = (void*)strtoull(str, &end, 16);
+    if (endptr == str) {
+        *count = -1;
+        return res;
+    }
+
+    *count = (int)(endptr - str);
+
     C_FREE(str);
     return res;
 }
