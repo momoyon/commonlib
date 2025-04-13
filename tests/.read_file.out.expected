@@ -1,4 +1,4 @@
-#define COMMONLIB_IMPLEMENTATION
+[INFO] `#define COMMONLIB_IMPLEMENTATION
 #include "../commonlib.h"
 
 int main(void) {
@@ -10,3 +10,4 @@ int main(void) {
 
     return 0;
 }
+` (298 bytes)
