@@ -10,6 +10,14 @@
 #include <assert.h>
 #include <limits.h>
 
+#if defined(_WIN32)
+// NOTE: Don't include unwanted files to speed up compilation
+#define WIN32_LEAN_AND_MEAN
+#define NOCOMM
+#include <windows.h>
+#undef C_ASSERT // Bruh
+#endif
+
 // Remove Prefix
 #ifdef COMMONLIB_REMOVE_PREFIX
 #define ASSERT C_ASSERT
@@ -115,12 +123,21 @@ typedef const wchar* wstr;
 
 
 // Macros
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(__INTEL_COMPILER)
+#define C_ASSERT(condition, msg) do {\
+                if (!(condition)) {\
+                        fprintf(stderr, "%s:%d:0 [ASSERTION FAILED] %s: %s", __FILE__, __LINE__, #condition, msg);\
+                        DebugBreak();\
+                }\
+        } while (0)
+#else
 #define C_ASSERT(condition, msg) do {\
                 if (!(condition)) {\
                         fprintf(stderr, "%s:%d:0 [ASSERTION FAILED] %s: %s", __FILE__, __LINE__, #condition, msg);\
                         exit(1);\
                 }\
         } while (0)
+#endif // defined(_MSC_VER) && !defined(__clang__) && !defined(__INTEL_COMPILER)
 
 #define C_ARRAY_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
@@ -732,7 +749,7 @@ c_String_view c_sv_get_part(c_String_view sv, int from, int to) {
     from = clampi(from, 0, sv.count);
     to   = clampi(to, from, sv.count);
 
-    String_view range = {
+    c_String_view range = {
         .data = (char*)(sv.data + from),
         .count = (size_t)(to - from),
     };
