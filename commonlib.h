@@ -35,6 +35,7 @@
 #define log_error c_log_error
 #define log_info c_log_info
 #define log_warning c_log_warning
+#define log_debug c_log_debug
 
 #define read_file c_read_file
 #define touch_file_if_doesnt_exist c_touch_file_if_doesnt_exist
@@ -228,7 +229,13 @@ bool c_os_file_exists(cstr filename);
 #define c_log_warning(fmt, ...) do {\
 		fprintf(stdout, "%s"fmt"\n", "[WARNING] ", ##__VA_ARGS__);\
 	} while (0)
-
+#ifdef DEBUG
+#define c_log_debug(fmt, ...) do {\
+		fprintf(stdout, "%s"fmt"\n", "[DEBUG] ", ##__VA_ARGS__);\
+	} while (0)
+#else
+#define c_log_debug(...)
+#endif // DEBUG
 //
 // File
 //
@@ -410,10 +417,27 @@ const char *c_read_file(const char* filename, int *file_size) {
 
     size_t read = fread((char*)result, sizeof(char), fsize, f);
 
-    *file_size = (int)read;
+    // Process the result to remove '\r' characters
+    char* cleaned_result = malloc(read + 1); // Allocate memory for cleaned result
+    if (cleaned_result == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        free(result);
+        return NULL;
+    }
 
-    // set null-terminator
-    result[read] = '\0';
+    size_t j = 0; // Index for cleaned_result
+    for (size_t i = 0; i < read; i++) {
+        if (result[i] != '\r') { // Skip '\r' characters
+            cleaned_result[j++] = result[i];
+        }
+    }
+    cleaned_result[j] = '\0'; // Null-terminate the cleaned result
+
+    free(result); // Free the original result
+    *file_size = (int)j; // Update the file size without '\r'
+    return cleaned_result; // Return the cleaned result
+
+    *file_size = (int)read;
 
  defer:
     if (f) fclose(f);
