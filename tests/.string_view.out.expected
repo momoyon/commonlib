@@ -5,3 +5,12 @@
 Blah Blah2
 THis is the end'
 [INFO] cstr from sv: Hello Mister -> Hello Mister
+[INFO] int from sv: -39 -> -39 (len of int str: 3)
+[INFO] int from sv: 1337  junk -> 1337 (len of int str: 4)
+[INFO] int from sv: baka1337  junk -> 0 (len of int str: -1)
+[INFO] uint from sv: 1240 -> 1240 (len of uint str: 4)
+[INFO] uint from sv: 00000012312strin -> 12312 (len of uint str: 11)
+[INFO] uint from sv: burger 123123.23423  junk -> 0 (len of uint str: -1)
+[INFO] float from sv: -2342.045BLAH345 -> -2342.044922 (len of float str: 9)
+[INFO] float from sv: 1.013012312310f -> 1.013012 (len of float str: 14)
+[INFO] float from sv: T.013012312310f -> 0.000000 (len of float str: -1)
