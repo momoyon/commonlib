@@ -10,7 +10,7 @@
 #include <assert.h>
 #include <limits.h>
 
-#if defined(_WIN32)
+#if defined(_WIN32) && defined(_MSC_VER)
 // NOTE: Don't include unwanted files to speed up compilation
 #define WIN32_LEAN_AND_MEAN
 #define NOCOMM
