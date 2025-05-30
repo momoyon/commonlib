@@ -26,6 +26,7 @@
 #define da_append c_da_append
 #define da_free c_da_free
 #define da_shift c_da_shift
+#define da_remove c_da_remove
 #define DYNAMIC_ARRAY_INITIAL_CAPACITY c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 // #define c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 
