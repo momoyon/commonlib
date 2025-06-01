@@ -23,10 +23,10 @@
 #define ASSERT C_ASSERT
 #define ARRAY_LEN C_ARRAY_LEN
 
-#define da_append c_da_append
-#define da_free c_da_free
-#define da_shift c_da_shift
-#define da_remove c_da_remove
+#define darr_append c_darr_append
+#define darr_free c_darr_free
+#define darr_shift c_darr_shift
+#define darr_remove c_darr_remove
 #define DYNAMIC_ARRAY_INITIAL_CAPACITY c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 // #define c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 
@@ -167,7 +167,7 @@ typedef struct c_Arena c_Arena;
 // Dynamic-Array
 //
 
-// NOTE: To use c_da_append() the Dynamic-Array struct should be defined using
+// NOTE: To use c_darr_append() the Dynamic-Array struct should be defined using
 // DEFINE_DYNAMIC_ARRAY or have the same members as below!
 // NOTE!!!: We actually don't want this since this makes the user want to
 // use this macro to define dynamic arrays. But the user might want extra fields
@@ -188,7 +188,7 @@ typedef struct c_Arena c_Arena;
 
 #define c_DYNAMIC_ARRAY_INITIAL_CAPACITY (sizeof(size_t))
 
-#define c_da_append(da, elm) do {\
+#define c_darr_append(da, elm) do {\
 		if ((da).items == NULL) {\
 			(da).capacity = c_DYNAMIC_ARRAY_INITIAL_CAPACITY;\
 			(da).count = 0;\
@@ -203,15 +203,15 @@ typedef struct c_Arena c_Arena;
 	} while (0)
 
 // NOTE: We cant do C_ASSERT() here because it aint one expression...
-// NOTE: da_shift will make the da loose its ptr, so store the ptr elsewhere if you want to free it later!!!
-#define c_da_shift(da) (assert((da).count > 0 && "Array is empty"), (da).count--, *(da).items++)
-#define c_da_free(da) C_FREE((da).items)
-#define c_da_remove(da, type, elm_ptr, idx) do {\
+// NOTE: darr_shift will make the da loose its ptr, so store the ptr elsewhere if you want to free it later!!!
+#define c_darr_shift(da) (assert((da).count > 0 && "Array is empty"), (da).count--, *(da).items++)
+#define c_darr_free(da) C_FREE((da).items)
+#define c_darr_remove(da, type, elm_ptr, idx) do {\
         if ((idx) >= 0 && (idx) <= (da).count-1) {\
             type temp = (da).items[(idx)];\
             (da).items[(idx)] = (da).items[(da).count-1];\
             (da).items[(da).count-1] = temp;\
-            if ((elm_ptr)) *(elm_ptr) = temp;\
+            if ((elm_ptr) != NULL) *(elm_ptr) = temp;\
             (da).count--;\
         }\
     } while (0)
