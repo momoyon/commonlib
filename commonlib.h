@@ -30,6 +30,11 @@
 #define darr_delete c_darr_delete
 #define DYNAMIC_ARRAY_INITIAL_CAPACITY c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 // #define c_DYNAMIC_ARRAY_INITIAL_CAPACITY
+#define arr_stack_init c_arr_stack_init
+#define arr_heap_init c_arr_heap_init
+#define arr_append c_arr_append
+#define arr_remove c_arr_remove
+#define arr_delete c_arr_delete
 
 #define os_get_timedate c_os_get_timedate
 #define os_file_exists c_os_file_exists
@@ -236,6 +241,66 @@ typedef struct c_Arena c_Arena;
             exit(1);\
         }\
     } while (0)
+
+//
+// Static-Array
+//
+
+// #define DEFINE_DYNAMIC_ARRAY(struct_name, elm_type) typedef struct {
+//         elm_type *items;
+//         size_t count;
+//         size_t capacity;
+//     }
+
+// NOTE: Initializes the static-array on the heap
+#define c_arr_heap_init(arr, cap) do {\
+    if ((arr).items != NULL) {\
+        log_error("%s:%d: This static-array is already initialized!", __FILE__, __LINE__);\
+        exit(1);\
+    }\
+    (arr).capacity = cap;\
+    (arr).items = C_CALLOC(sizeof(*(arr).items), (arr).capacity);\
+    if ((arr).items == NULL) {\
+        log_error("%s:%d: calloc failed while trying init this static-array!", __FILE__, __LINE__);\
+        exit(1);\
+    }\
+    } while (0)
+
+// NOTE: Initializes the static-array on the stack
+// NOTE: You are supposed to pass a struct that ateast has the same members as Dynamic-Arrays.
+// NOTE: This just sets the `capacity` member of the struct to the capacity inferred by the stack-allocated items
+// eg: ```C
+//     #define ARR_CAP 1024
+//     typedef struct {
+//          int items[ARR_CAP];
+//          size_t count;
+//          size_t capacity;
+//     } Array;
+//     ```
+#define c_arr_stack_init(arr) do {\
+        if ((arr).items == NULL) {\
+            log_error("%s:%d: Please pass an static-array that has it's `items` alloced on the stack!", __FILE__, __LINE__);\
+            exit(1);\
+        }\
+        (arr).capacity = C_ARRAY_LEN((arr).items);\
+        if ((arr).capacity == 0) {\
+            log_error("%s:%d: Failed to set the capacity of the static-array!", __FILE__, __LINE__);\
+            exit(1);\
+        }\
+    } while (0)
+
+#define c_arr_append(arr, elm) do {\
+    if ((arr).items == NULL) {\
+        log_error("%s:%d: Please initialize the static array!", __FILE__, __LINE__);\
+        exit(1);\
+    }\
+    if ((arr).count + 1 < (arr).capacity) {\
+        (arr).items[(arr).count++] = elm;\
+    }\
+    } while (0)
+
+#define c_arr_remove c_darr_remove
+#define c_arr_delete c_darr_delete
 
 //
 // OS

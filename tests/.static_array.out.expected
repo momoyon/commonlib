@@ -1,0 +1,9 @@
+[INFO] STACK:
+[INFO] arr: 0, 1024 
+[INFO] arr: 3, 1024 
+[INFO] HEAP:
+[INFO] harr: 0, 2048 
+[INFO] harr: 3, 2048 
+[INFO] Element 1: 420
+[INFO] harr.count after remove: 2
+[INFO] harr.count after delete: 1
