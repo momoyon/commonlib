@@ -27,6 +27,7 @@
 #define darr_free c_darr_free
 #define darr_shift c_darr_shift
 #define darr_remove c_darr_remove
+#define darr_delete c_darr_delete
 #define DYNAMIC_ARRAY_INITIAL_CAPACITY c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 // #define c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 
@@ -91,6 +92,9 @@
 // Memory allocation
 #ifndef C_MALLOC
 #define C_MALLOC malloc
+#endif
+#ifndef C_CALLOC
+#define C_CALLOC calloc
 #endif
 #ifndef C_FREE
 #define C_FREE free
@@ -206,13 +210,30 @@ typedef struct c_Arena c_Arena;
 // NOTE: darr_shift will make the da loose its ptr, so store the ptr elsewhere if you want to free it later!!!
 #define c_darr_shift(da) (assert((da).count > 0 && "Array is empty"), (da).count--, *(da).items++)
 #define c_darr_free(da) C_FREE((da).items)
+#define c_darr_delete(da, type, idx) do {\
+        if ((idx) >= 0 && (idx) <= (da).count-1) {\
+            type temp = (da).items[(idx)];\
+            (da).items[(idx)] = (da).items[(da).count-1];\
+            (da).items[--(da).count] = temp;\
+        } else {\
+            c_log_error("%s:%d: Trying to remove from outofbounds! %zu != (0 ~ %zu)", __FILE__, __LINE__, idx, (da).count);\
+            exit(1);\
+        }\
+    } while (0)
 #define c_darr_remove(da, type, elm_ptr, idx) do {\
         if ((idx) >= 0 && (idx) <= (da).count-1) {\
             type temp = (da).items[(idx)];\
             (da).items[(idx)] = (da).items[(da).count-1];\
-            (da).items[(da).count-1] = temp;\
-            if ((elm_ptr) != NULL) *(elm_ptr) = temp;\
-            (da).count--;\
+            (da).items[--(da).count] = temp;\
+            if ((elm_ptr) == NULL) {\
+                c_log_error("%s:%d: You cant pass NULL as the elm_ptr! please use c_darr_delete to not get the element removed!", __FILE__, __LINE__);\
+                exit(1);\
+            }\
+            type *temp_ptr = elm_ptr; \
+            *temp_ptr = temp; \
+        } else {\
+            c_log_error("%s:%d: Trying to remove from outofbounds! %zu != (0 ~ %zu)", __FILE__, __LINE__, idx, (da).count);\
+            exit(1);\
         }\
     } while (0)
 

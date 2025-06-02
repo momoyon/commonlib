@@ -32,10 +32,9 @@ int main(void) {
     c_log_info("Third element: %d", third);
     c_log_info("da count after remove: %zu", da.count);
 
-    int outofbound_value = -1;
-    c_darr_remove(da, int, &outofbound_value, 50);
-    c_log_info("outofbound_value : %d", outofbound_value);
-    c_log_info("da count after trying to remove outofbounds_value: %zu", da.count);
+    c_darr_delete(da, int, 0);
+
+    c_log_info("da count after delete: %zu", da.count);
 
     return 0;
 }

@@ -7,5 +7,4 @@
 [INFO] da count before remove: 5
 [INFO] Third element: 4
 [INFO] da count after remove: 4
-[INFO] outofbound_value : -1
-[INFO] da count after trying to remove outofbounds_value: 4
+[INFO] da count after delete: 3
