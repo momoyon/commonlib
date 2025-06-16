@@ -39,6 +39,7 @@
 #define arr_append c_arr_append
 #define arr_remove c_arr_remove
 #define arr_delete c_arr_delete
+#define arr_free   c_arr_free
 
 #define os_get_timedate c_os_get_timedate
 #define os_file_exists c_os_file_exists
@@ -324,6 +325,7 @@ typedef struct c_Arena c_Arena;
 
 #define c_arr_remove c_darr_remove
 #define c_arr_delete c_darr_delete
+#define c_arr_free c_darr_free
 
 //
 // OS

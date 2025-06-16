@@ -51,7 +51,7 @@ int main(void) {
     ASSERT(harr.count == 1, "This should be correct!");
 
 
-
+	arr_free(harr);
     return 0;
 }
 
