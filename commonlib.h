@@ -319,7 +319,7 @@ typedef struct c_Arena c_Arena;
         log_error("%s:%d: Please initialize the static array!", __FILE__, __LINE__);\
         exit(1);\
     }\
-    if ((arr).count + 1 <= (arr).capacity-1) {\
+    if ((arr).count <= (arr).capacity-1) {\
         (arr).items[(arr).count++] = elm;\
     } else {\
 		log_warning("%s:%d: Trying to add element outofbounds!", __FILE__, __LINE__);\
