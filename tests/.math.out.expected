@@ -1,0 +1,4 @@
+[INFO] i: 11
+[INFO] clamped to 0 ~ 10: 10
+[INFO] f: -0.500000
+[INFO] clamped to 0.0 ~ 1.0: 0.000000
