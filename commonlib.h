@@ -63,7 +63,7 @@
 #define clampi c_clampi
 #define clampf c_clampf
 #define randomi c_randomi
-#define ranfomf c_ranfomf
+#define randomf c_randomf
 
 #define String_view c_String_view
 
@@ -487,7 +487,7 @@ float c_randomf(float from, float to) {
 }
 
 int c_randomi(int from, int to) {
-	return randomf((float)v, (float)from, (float)to);
+	return randomf((float)from, (float)to);
 }
 
 //
