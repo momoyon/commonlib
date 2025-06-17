@@ -497,7 +497,7 @@ float c_randomf(float from, float to) {
 }
 
 int c_randomi(int from, int to) {
-	return randomf((float)from, (float)to);
+	return c_randomf((float)from, (float)to);
 }
 
 //
@@ -951,8 +951,8 @@ bool c_sv_equals(c_String_view sv1, c_String_view sv2) {
 }
 
 c_String_view c_sv_get_part(c_String_view sv, int from, int to) {
-    from = clampi(from, 0, sv.count);
-    to   = clampi(to, from, sv.count);
+    from = c_clampi(from, 0, sv.count);
+    to   = c_clampi(to, from, sv.count);
 
     c_String_view range = {
         .data = (char*)(sv.data + from),

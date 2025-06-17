@@ -1,4 +1,3 @@
-program: ./shift_args
-After:
+program: shift_args
 argc: 0
 argv: (null)
