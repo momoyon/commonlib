@@ -60,6 +60,11 @@
 #define arena_alloc_str c_arena_alloc_str
 #define arena_alloc_wstr c_arena_alloc_wstr
 
+#define clampi c_clampi
+#define clampf c_clampf
+#define randomi c_randomi
+#define ranfomf c_ranfomf
+
 #define String_view c_String_view
 
 #define shift_args c_shift_args
@@ -164,10 +169,10 @@ typedef const wchar* wstr;
 // Math
 //
 
-int clampi(int v, int min, int max);
-float clampf(float v, float min, float max);
-float randomf(float v, float from, float to);
-int randomi(int v, int from, int to);
+int   c_clampi(int v, int min, int max);
+float c_clampf(float v, float min, float max);
+float c_randomf(float from, float to);
+int   c_randomi(int from, int to);
 
 //
 // Struct pre-decls
@@ -464,24 +469,24 @@ c_String_view c_sv_get_part(c_String_view sv, int from, int to);
 // Math
 //
 
-int clampi(int v, int min, int max) {
+int c_clampi(int v, int min, int max) {
     v = v < min ? min : v;
     v = v > max ? max : v;
     return v;
 }
 
-float clampf(float v, float min, float max) {
+float c_clampf(float v, float min, float max) {
     v = v < min ? min : v;
     v = v > max ? max : v;
     return v;
 }
 
-float randomf(float v, float from, float to) {
+float c_randomf(float from, float to) {
 	float r = rand() / RAND_MAX;
 	return from + (to - from) * r;
 }
 
-int randomi(int v, int from, int to) {
+int c_randomi(int from, int to) {
 	return randomf((float)v, (float)from, (float)to);
 }
 
