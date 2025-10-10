@@ -1,14 +1,33 @@
 #define COMMONLIB_IMPLEMENTATION
+#define COMMONLIB_REMOVE_PREFIX
 #include "../commonlib.h"
 
 int main(void) {
-    c_Arena a = c_arena_make(0);
+    Arena a = arena_make(0);
 
-    const char *str = c_arena_alloc_str(a, "Foo: %d", 69);
+    int *integer_ptr = (int *)arena_alloc(&a, sizeof(int)+2); // 6-byte allocated
 
-    c_log_info("str: %s", str);
+    ASSERT(a.alloced_blocks.count == 1, "RAH");
 
-    c_arena_free(&a);
+    *integer_ptr = 69;
+
+    const char *str = arena_alloc_str(a, "Foo: %d", 1337);
+
+    ASSERT(a.alloced_blocks.count == 2, "RAH");
+    ASSERT(a.free_blocks.count == 0, "RAH");
+
+    arena_dealloc(&a, integer_ptr);
+    ASSERT(a.alloced_blocks.count == 1, "RAH");
+    ASSERT(a.free_blocks.count == 1, "RAH");
+
+    int *another_integer_ptr = (int *)arena_alloc(&a, sizeof(int));
+
+    ASSERT(a.alloced_blocks.count == 2, "RAH");
+    ASSERT(a.free_blocks.count == 1, "RAH");
+
+    *another_integer_ptr = 100;
+
+    arena_free(&a);
 
     return 0;
 }
