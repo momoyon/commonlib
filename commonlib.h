@@ -110,6 +110,10 @@
 #define sv_get_part c_sv_get_part
 #define sv_lpop_arg c_sv_lpop_arg
 
+#define SET_FLAG C_SET_FLAG
+#define UNSET_FLAG C_UNSET_FLAG
+#define GET_FLAG C_GET_FLAG
+
 #endif // COMMONLIB_REMOVE_PREFIX
 
 // Bit-flags
