@@ -112,6 +112,12 @@
 
 #endif // COMMONLIB_REMOVE_PREFIX
 
+// Bit-flags
+#define C_SET_FLAG(flags, bit_number)   ((flags) |= (1U << (bit_number)))
+#define C_UNSET_FLAG(flags, bit_number) ((flags) &= ~(1U << (bit_number)))
+#define C_GET_FLAG(flags, bit_number)   (((flags) >> (bit_number)) & 1U)
+
+
 // Memory allocation
 #ifndef C_MALLOC
 #define C_MALLOC malloc
@@ -429,6 +435,7 @@ void c_arena_reset(c_Arena* a);
 void c_arena_free(c_Arena* a);
 
 // TODO: Do we embed stb_snprintf to use stbsp_snprintf?
+// TODO: This doesn't correctly work now that we use Mem_blocks
 #define c_arena_alloc_str(a, fmt, ...)    c_arena_alloc(&(a), sizeof(char)*snprintf((a).ptr, (int)((a).buff_size - ((uint8*)(a).ptr - (uint8*)(a).buff)), (fmt), __VA_ARGS__)+1)
 #define c_arena_alloc_wstr(a, fmt, ...) c_arena_alloc(&a, sizeof(char)*wprintf(a.ptr, a.buff_size - ((uint8*)a.ptr - (uint8*)a.buff), (fmt), __VA_ARGS__)+1)
 
