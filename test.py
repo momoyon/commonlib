@@ -5,6 +5,8 @@ import sys
 import shlex
 import coloredlogs, logging
 
+from pathlib import Path
+
 # TODO: Remove the stdin, because we can pass that through BUILD_CMD and RUN_CMD
 
 '''-COLORED PRINT------------'''
@@ -85,6 +87,8 @@ RUN_CMD="NOT SET"
 TESTS_DIR="NOT SET"
 # Suffix of the source files the build command iw (if there is a . prefix, it will be removed
 SRC_SUFFIX="NOT SET"
+
+script_dir = Path(__file__).resolve().parent
 
 def get_env_variables():
     global BUILD_CMD, RUN_CMD, TESTS_DIR, SRC_SUFFIX
@@ -276,7 +280,7 @@ def main():
     check_crucial_envvar(TESTS_DIR, "TESTS_DIR")
     check_crucial_envvar(SRC_SUFFIX, "SRC_SUFFIX")
 
-    os.chdir(TESTS_DIR)
+    os.chdir(script_dir / TESTS_DIR)
     if verbose_output: logger.info(f"Changed cwd to {os.getcwd()}")
 
     tests = {}
