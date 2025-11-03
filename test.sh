@@ -2,7 +2,7 @@
 
 export SRC_SUFFIX=.c
 export TESTS_DIR=./tests
-export BUILD_CMD="gcc -o {test_name} {test_name}.{src_suffix}"
+export BUILD_CMD="gcc -std=c11 -o {test_name} {test_name}.{src_suffix}"
 export RUN_CMD="./{test_name}"
 
-./test.py $*
+python ./test.py $*
