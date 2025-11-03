@@ -162,8 +162,6 @@ typedef const wchar* wstr;
 
 
 // Static variables
-#define C_ERROR_BUFF_CAP (1024)
-extern char __error_buff__[C_ERROR_BUFF_CAP];
 
 // Macros
 #if defined(_MSC_VER) && !defined(__clang__) && !defined(__INTEL_COMPILER)
@@ -512,7 +510,6 @@ bool c_sv_lpop_arg(c_String_view *sv, c_String_view *out);
 // My things implementation:
 
 // Global variables
-char __error_buff__[C_ERROR_BUFF_CAP] = {0};
 
 //
 // Math
@@ -585,36 +582,31 @@ const char *c_read_file(const char* filename, int *file_size) {
     char* result = NULL;
 
     if (f == NULL){
-        strerror_s(__error_buff__, C_ERROR_BUFF_CAP, errno);
-        c_log_error("'%s': %s", filename, __error_buff__);
+        c_log_error("'%s': %s", filename, strerror(errno));
         defer(NULL);
     }
 
     if (fseek(f, 0, SEEK_END) < 0) {
-        strerror_s(__error_buff__, C_ERROR_BUFF_CAP, errno);
-        c_log_error("'%s': %s", filename, __error_buff__);
+        c_log_error("'%s': %s", filename, strerror(errno));
         defer(NULL);
     }
 
     size_t fsize = ftell(f);
 
     if (fsize == (size_t)-1){
-        strerror_s(__error_buff__, C_ERROR_BUFF_CAP, errno);
-        c_log_error("'%s': %s", filename, __error_buff__);
+        c_log_error("'%s': %s", filename, strerror(errno));
         defer(NULL);
     }
 
     result = C_MALLOC(sizeof(char)*(fsize+1));
 
     if (result == NULL){
-        strerror_s(__error_buff__, C_ERROR_BUFF_CAP, errno);
-        c_log_error("'%s': %s", filename, __error_buff__);
+        c_log_error("'%s': %s", filename, strerror(errno));
         defer(NULL);
     }
 
     if (fseek(f, 0, SEEK_SET) < 0) {
-        strerror_s(__error_buff__, C_ERROR_BUFF_CAP, errno);
-        c_log_error("'%s': %s", filename, __error_buff__);
+        c_log_error("'%s': %s", filename, strerror(errno));
         defer(NULL);
     }
 
