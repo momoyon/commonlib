@@ -13,6 +13,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      
+      - name: Pwd
+        run: |
+          pwd
 
       - name: Install pip dependencies
         run: |
@@ -21,18 +25,7 @@ jobs:
       - name: Build
         run: |
           sh ./test.sh build -x
-  run-job:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install pip dependencies
-        run: |
-          pip install coloredlogs
 
       - name: Run
         run: |
           sh ./test.sh run -x
-
