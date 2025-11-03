@@ -217,7 +217,7 @@ typedef struct c_Arena c_Arena;
 // in the struct; So we recommend defining da structs manually like:
 // ```C
 // typedef struct {
-//    <item-type> items;
+//    <item-type> *items;
 //    size_t count;
 //    size_t capacity;
 //    [extra fields...];
