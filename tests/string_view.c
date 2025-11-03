@@ -40,19 +40,19 @@ int main(void) {
     int64 i = sv_to_int(int_sv, &i_count, 10);
     ASSERT(i_count != -1, "We know `int_sv` contains an int!");
 
-    log_info("int from sv: "SV_FMT" -> %d (len of int str: %d)", SV_ARG(int_sv), i, i_count);
+    log_info("int from sv: "SV_FMT" -> %d (len of int str: %d)", SV_ARG(int_sv), (int)i, i_count);
 
     int_sv = SV("1337  junk");
     i = sv_to_int(int_sv, &i_count, 10);
     ASSERT(i_count != -1, "We know `int_sv` contains an int!");
 
-    log_info("int from sv: "SV_FMT" -> %d (len of int str: %d)", SV_ARG(int_sv), i, i_count);
+    log_info("int from sv: "SV_FMT" -> %d (len of int str: %d)", SV_ARG(int_sv), (int)i, i_count);
 
     int_sv = SV("baka1337  junk");
     i = sv_to_int(int_sv, &i_count, 10);
     ASSERT(i_count == -1, "We know `int_sv` does not contain an int!");
 
-    log_info("int from sv: "SV_FMT" -> %d (len of int str: %d)", SV_ARG(int_sv), i, i_count);
+    log_info("int from sv: "SV_FMT" -> %d (len of int str: %d)", SV_ARG(int_sv), (int)i, i_count);
 
     // UINT
     int u_count = -1;
@@ -60,19 +60,19 @@ int main(void) {
     uint64 u = sv_to_uint(uint_sv, &u_count, 10);
     ASSERT(u_count != -1, "We know `uint_sv` contains an uint!");
 
-    log_info("uint from sv: "SV_FMT" -> %d (len of uint str: %d)", SV_ARG(uint_sv), u, u_count);
+    log_info("uint from sv: "SV_FMT" -> %d (len of uint str: %d)", SV_ARG(uint_sv), (int)u, u_count);
 
     uint_sv = SV("00000012312strin");
     u = sv_to_uint(uint_sv, &u_count, 10);
     ASSERT(u_count != -1, "We know `uint_sv` contains an uint!");
 
-    log_info("uint from sv: "SV_FMT" -> %d (len of uint str: %d)", SV_ARG(uint_sv), u, u_count);
+    log_info("uint from sv: "SV_FMT" -> %d (len of uint str: %d)", SV_ARG(uint_sv), (int)u, u_count);
 
     uint_sv = SV("burger 123123.23423  junk");
     u = sv_to_uint(uint_sv, &u_count, 10);
     ASSERT(u_count == -1, "We know `uint_sv` does not contain an uint!");
 
-    log_info("uint from sv: "SV_FMT" -> %d (len of uint str: %d)", SV_ARG(uint_sv), u, u_count);
+    log_info("uint from sv: "SV_FMT" -> %d (len of uint str: %d)", SV_ARG(uint_sv), (int)u, u_count);
 
     // FLOAT
     int f_count = -1;
