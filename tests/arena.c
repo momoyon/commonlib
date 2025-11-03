@@ -11,7 +11,9 @@ int main(void) {
 
     *integer_ptr = 69;
 
-    const char *str = arena_alloc_str(a, "Foo: %d", 1337);
+    const char *str = arena_alloc_str(a, "Foo: %d", *integer_ptr);
+
+    log_info("str: %s", str);
 
     ASSERT(a.alloced_blocks.count == 2, "RAH");
     ASSERT(a.free_blocks.count == 0, "RAH");
