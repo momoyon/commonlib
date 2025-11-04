@@ -18,6 +18,10 @@ jobs:
         run: |
           pwd
 
+      - name: List tests
+        run: |
+          ls ./tests
+
       - name: Install pip dependencies
         run: |
           pip install coloredlogs
