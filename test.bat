@@ -2,7 +2,7 @@
 
 set SRC_SUFFIX=.c
 set TESTS_DIR=./tests
-set BUILD_CMD=gcc -o {test_name} {test_name}.{src_suffix} -ggdb
+set BUILD_CMD=gcc -o {test_name} {test_name}.{src_suffix} -ggdb -lshlwapi
 set RUN_CMD=".\{test_name}"
 
 python .\test.py %*
