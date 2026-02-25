@@ -25,6 +25,9 @@
 #define ASSERT C_ASSERT
 #define ARRAY_LEN C_ARRAY_LEN
 
+#define MIN C_MIN
+#define MAX C_MAX
+
 #define darr_append c_darr_append
 #define darr_free c_darr_free
 #define darr_shift c_darr_shift
@@ -171,6 +174,9 @@ typedef const wchar* wstr;
 // Static variables
 
 // Macros
+#define C_MIN(a, b) a < b ? a : b
+#define C_MAX(a, b) a > b ? a : b
+
 #if defined(_MSC_VER) && !defined(__clang__) && !defined(__INTEL_COMPILER)
 #define C_ASSERT(condition, msg) do {\
                 if (!(condition)) {\

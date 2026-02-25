@@ -2,3 +2,5 @@
 [INFO] clamped to 0 ~ 10: 10
 [INFO] f: -0.500000
 [INFO] clamped to 0.0 ~ 1.0: 0.000000
+[INFO] MAX(1, 2): 2
+[INFO] MIN(231, 123): 123

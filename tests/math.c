@@ -16,5 +16,9 @@ int main(void) {
 
 	log_info("clamped to 0.0 ~ 1.0: %f", f);
 
+
+    log_info("MAX(1, 2): %d", MAX(1, 2));
+    log_info("MIN(231, 123): %d", MIN(231, 123));
+
 	return 0;
 }
