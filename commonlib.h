@@ -31,6 +31,8 @@
 #define darr_append c_darr_append
 #define darr_free c_darr_free
 #define darr_shift c_darr_shift
+#define darr_remove c_darr_remove
+#define darr_delete c_darr_delete
 #define darr_remove_unordered c_darr_remove_unordered
 #define darr_delete_unordered c_darr_delete_unordered
 #define DYNAMIC_ARRAY_INITIAL_CAPACITY c_DYNAMIC_ARRAY_INITIAL_CAPACITY
@@ -275,6 +277,27 @@ typedef struct c_String_array c_String_array;
             type temp = (da).items[(idx)];\
             (da).items[(idx)] = (da).items[(da).count-1];\
             (da).items[--(da).count] = temp;\
+        } else {\
+            c_log_error("%s:%d: Trying to remove from outofbounds! %zu != (0 ~ %zu)", __FILE__, __LINE__, (size_t)idx, (size_t)(da).count);\
+            exit(1);\
+        }\
+    } while (0)
+
+#define c_darr_remove(da, type, elm_ptr, idx) c_darr_remove_impl(da, type, elm_ptr, idx, c_darr_remove)
+#define c_darr_remove_impl(da, type, elm_ptr, idx, api) do {\
+        if (strcmp(#api, "c_darr_remove") != 0) {\
+            c_log_warning("%s is deprecated please use the newer api!", #api);\
+        }\
+        if ((idx) >= 0 && (idx) <= (da).count-1) {\
+            type temp = (da).items[(idx)];\
+            C_MEMMOVE(&(da).items + ((idx)*sizeof(type)), &(da).items + (((idx)+1)*sizeof(type)), ((da).count - (idx))*sizeof(type));\
+            (da).count--;\
+            if ((elm_ptr) == NULL) {\
+                c_log_error("%s:%d: You cant pass NULL as the elm_ptr! please use c_darr_delete to not get the element removed!", __FILE__, __LINE__);\
+                exit(1);\
+            }\
+            type *temp_ptr = elm_ptr; \
+            *temp_ptr = temp; \
         } else {\
             c_log_error("%s:%d: Trying to remove from outofbounds! %zu != (0 ~ %zu)", __FILE__, __LINE__, (size_t)idx, (size_t)(da).count);\
             exit(1);\
