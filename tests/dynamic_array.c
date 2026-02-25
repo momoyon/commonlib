@@ -32,7 +32,7 @@ int main(void) {
     c_log_info("Third element: %d", third);
     c_log_info("da count after remove: %zu", da.count);
 
-    c_darr_delete(da, int, 0);
+    c_darr_delete_unordered(da, int, 0);
 
     c_log_info("da count after delete: %zu", da.count);
 

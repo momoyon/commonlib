@@ -29,7 +29,7 @@
 #define darr_free c_darr_free
 #define darr_shift c_darr_shift
 #define darr_remove c_darr_remove
-#define darr_delete c_darr_delete
+#define darr_delete_unordered c_darr_delete_unordered
 #define DYNAMIC_ARRAY_INITIAL_CAPACITY c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 // Deprecated Dynamic-array API
 #define da_append c_da_append
@@ -40,7 +40,7 @@
 #define arr_heap_init c_arr_heap_init
 #define arr_append c_arr_append
 #define arr_remove c_arr_remove
-#define arr_delete c_arr_delete
+#define arr_delete_unordered c_arr_delete_unordered
 #define arr_free   c_arr_free
 
 #define os_get_timedate c_os_get_timedate
@@ -257,9 +257,9 @@ typedef struct c_String_array c_String_array;
 #define c_darr_shift(da) (assert((da).count > 0 && "Array is empty"), (da).count--, *(da).items++)
 #define c_darr_free(da) C_FREE((da).items)
 
-#define c_darr_delete(da, type, idx) c_darr_delete_impl(da, type, idx, c_darr_delete)
-#define c_darr_delete_impl(da, type, idx, api) do {\
-        if (strcmp(#api, "c_darr_delete") != 0) {\
+#define c_darr_delete_unordered(da, type, idx) c_darr_delete_unordered_impl(da, type, idx, c_darr_delete_unordered)
+#define c_darr_delete_unordered_impl(da, type, idx, api) do {\
+        if (strcmp(#api, "c_darr_delete_unordered") != 0) {\
             c_log_warning("%s is deprecated please use the newer api!", #api);\
         }\
         if ((idx) >= 0 && (idx) <= (da).count-1) {\
@@ -282,7 +282,7 @@ typedef struct c_String_array c_String_array;
             (da).items[(idx)] = (da).items[(da).count-1];\
             (da).items[--(da).count] = temp;\
             if ((elm_ptr) == NULL) {\
-                c_log_error("%s:%d: You cant pass NULL as the elm_ptr! please use c_darr_delete to not get the element removed!", __FILE__, __LINE__);\
+                c_log_error("%s:%d: You cant pass NULL as the elm_ptr! please use c_darr_delete_unordered to not get the element removed!", __FILE__, __LINE__);\
                 exit(1);\
             }\
             type *temp_ptr = elm_ptr; \
@@ -295,7 +295,7 @@ typedef struct c_String_array c_String_array;
 
 // Deprecated API
 #define c_da_append(da, elm) c_darr_append_impl(da, elm, c_da_append)
-#define c_da_delete(da, type, idx) c_darr_delete_impl(da, type, idx, c_da_delete)
+#define c_da_delete_unordered(da, type, idx) c_darr_delete_unordered_impl(da, type, idx, c_da_delete_unordered)
 #define c_da_remove(da, type, elm_ptr, idx) c_darr_remove_impl(da, type, elm_ptr, idx, c_da_remove)
 
 //
@@ -359,7 +359,7 @@ typedef struct c_String_array c_String_array;
     } while (0)
 
 #define c_arr_remove c_darr_remove
-#define c_arr_delete c_darr_delete
+#define c_arr_delete_unordered c_darr_delete_unordered
 #define c_arr_free c_darr_free
 
 //
@@ -740,7 +740,7 @@ void* c_arena_alloc(c_Arena* a, size_t size) {
 
             size_t diff = free_block.size - size;
 
-            c_darr_delete(a->free_blocks, c_Mem_block, i);
+            c_darr_delete_unordered(a->free_blocks, c_Mem_block, i);
 
             if (diff > 0) {
                 c_Mem_block residue_block = {
@@ -789,7 +789,7 @@ void c_arena_dealloc(c_Arena *a, void *mem) {
 
         if (block.mem == mem) {
             c_darr_append(a->free_blocks, block);
-            c_darr_delete(a->alloced_blocks, c_Mem_block, i);
+            c_darr_delete_unordered(a->alloced_blocks, c_Mem_block, i);
             return;
         }
     }

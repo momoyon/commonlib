@@ -46,7 +46,7 @@ int main(void) {
     log_info("Element %zu: %d", i, elm);
     log_info("harr.count after remove: %zu", harr.count);
 
-    arr_delete(harr, int, 1);
+    arr_delete_unordered(harr, int, 1);
     log_info("harr.count after delete: %zu", harr.count);
     ASSERT(harr.count == 1, "This should be correct!");
 
