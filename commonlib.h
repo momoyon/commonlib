@@ -142,6 +142,9 @@
 #ifndef C_MEMCPY
 #define C_MEMCPY memcpy
 #endif
+#ifndef C_MEMMOVE
+#define C_MEMMOVE memmove
+#endif
 
 
 // typedefs
