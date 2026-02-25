@@ -38,7 +38,7 @@ int main(void) {
 
     int elm = -1;
     size_t i = 1;
-    arr_remove(harr, int, &elm, i);
+    arr_remove_unordered(harr, int, &elm, i);
 
     ASSERT(elm == 420, "This should be correct!");
     ASSERT(harr.count == 2, "This should be correct!");

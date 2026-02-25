@@ -28,18 +28,18 @@
 #define darr_append c_darr_append
 #define darr_free c_darr_free
 #define darr_shift c_darr_shift
-#define darr_remove c_darr_remove
+#define darr_remove_unordered c_darr_remove_unordered
 #define darr_delete_unordered c_darr_delete_unordered
 #define DYNAMIC_ARRAY_INITIAL_CAPACITY c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 // Deprecated Dynamic-array API
 #define da_append c_da_append
 #define da_delete c_da_delete
-#define da_remove c_da_remove
+#define da_remove_unorederd c_da_remove_unordered
 // #define c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 #define arr_stack_init c_arr_stack_init
 #define arr_heap_init c_arr_heap_init
 #define arr_append c_arr_append
-#define arr_remove c_arr_remove
+#define arr_remove_unordered c_arr_remove_unordered
 #define arr_delete_unordered c_arr_delete_unordered
 #define arr_free   c_arr_free
 
@@ -272,9 +272,9 @@ typedef struct c_String_array c_String_array;
         }\
     } while (0)
 
-#define c_darr_remove(da, type, elm_ptr, idx) c_darr_remove_impl(da, type, elm_ptr, idx, c_darr_remove)
-#define c_darr_remove_impl(da, type, elm_ptr, idx, api) do {\
-        if (strcmp(#api, "c_darr_remove") != 0) {\
+#define c_darr_remove_unordered(da, type, elm_ptr, idx) c_darr_remove_unordered_impl(da, type, elm_ptr, idx, c_darr_remove_unordered)
+#define c_darr_remove_unordered_impl(da, type, elm_ptr, idx, api) do {\
+        if (strcmp(#api, "c_darr_remove_unordered") != 0) {\
             c_log_warning("%s is deprecated please use the newer api!", #api);\
         }\
         if ((idx) >= 0 && (idx) <= (da).count-1) {\
@@ -296,7 +296,7 @@ typedef struct c_String_array c_String_array;
 // Deprecated API
 #define c_da_append(da, elm) c_darr_append_impl(da, elm, c_da_append)
 #define c_da_delete_unordered(da, type, idx) c_darr_delete_unordered_impl(da, type, idx, c_da_delete_unordered)
-#define c_da_remove(da, type, elm_ptr, idx) c_darr_remove_impl(da, type, elm_ptr, idx, c_da_remove)
+#define c_da_remove_unordered(da, type, elm_ptr, idx) c_darr_remove_unordered_impl(da, type, elm_ptr, idx, c_da_remove_unordered)
 
 //
 // Static-Array
@@ -358,7 +358,7 @@ typedef struct c_String_array c_String_array;
 	}\
     } while (0)
 
-#define c_arr_remove c_darr_remove
+#define c_arr_remove_unordered c_darr_remove_unordered
 #define c_arr_delete_unordered c_darr_delete_unordered
 #define c_arr_free c_darr_free
 

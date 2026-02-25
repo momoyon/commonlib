@@ -27,7 +27,7 @@ int main(void) {
 
     int third = 0;
     c_log_info("da count before remove: %zu", da.count);
-    c_darr_remove(da, int, &third, 2);
+    c_darr_remove_unordered(da, int, &third, 2);
 
     c_log_info("Third element: %d", third);
     c_log_info("da count after remove: %zu", da.count);
