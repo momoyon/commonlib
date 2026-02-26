@@ -36,19 +36,12 @@ int main(void) {
     arr_append(harr, 1337);
     log_info("harr: %zu, %zu ", harr.count, harr.capacity);
 
-    int elm = -1;
     size_t i = 1;
-    arr_remove_unordered(harr, int, &elm, i);
+    arr_remove_unordered(harr, i);
 
-    ASSERT(elm == 420, "This should be correct!");
     ASSERT(harr.count == 2, "This should be correct!");
 
-    log_info("Element %zu: %d", i, elm);
     log_info("harr.count after remove: %zu", harr.count);
-
-    arr_delete_unordered(harr, int, 1);
-    log_info("harr.count after delete: %zu", harr.count);
-    ASSERT(harr.count == 1, "This should be correct!");
 
 
 	arr_free(harr);

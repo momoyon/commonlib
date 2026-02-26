@@ -15,7 +15,6 @@ int main(void) {
     // }
     //
     // darr_free(files);
-
     return 0;
 }
 

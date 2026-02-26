@@ -4,7 +4,10 @@
 [INFO] 4
 [INFO] 6
 [INFO] 8
+[INFO] >>UNORDERED:
 [INFO] da count before remove: 5
-[INFO] Third element: 4
 [INFO] da count after remove: 4
-[INFO] da count after delete: 3
+[INFO] Before ordered remove:
+0 1 2 3 4 5 6 7 8 9 
+[INFO] After ordered element at index 4 removed:
+0 1 2 3 5 6 7 8 9 
