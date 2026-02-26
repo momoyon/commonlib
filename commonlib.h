@@ -276,6 +276,16 @@ typedef struct c_String_array c_String_array;
         }\
     } while (0)
 
+#define c_darr_remove(da, idx) do {\
+        if ((idx) >= 0 && (idx) <= (da).count-1) {\
+			C_MEMMOVE((da).items + (idx), (da).items + (idx) + 1, ((da).count - (idx) + 1) * sizeof(*(da).items));\
+			(da).count--;\
+        } else {\
+            c_log_error("%s:%d: Trying to remove from outofbounds! %zu != (0 ~ %zu)", __FILE__, __LINE__, (size_t)idx, (size_t)(da).count);\
+            exit(1);\
+        }\
+    } while (0)
+
 //
 // Static-Array
 //
