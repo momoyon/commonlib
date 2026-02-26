@@ -6,7 +6,4 @@
 [INFO] 8
 [INFO] >>UNORDERED:
 [INFO] da count before remove: 5
-[INFO] Third element: 4
 [INFO] da count after remove: 4
-[INFO] da count after delete: 3
-[INFO] <<ORDERED:
