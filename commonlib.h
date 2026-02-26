@@ -584,8 +584,8 @@ bool c_os_file_exists(cstr filename) {
 }
 
 c_String_array c_os_list_files(cstr dir) {
-    c_Stc_String_array res = {0};
-    ASSERT(false, "UNIMPLEMENTED!");
+    c_String_array res = {0};
+    C_ASSERT(false, "UNIMPLEMENTED!");
     return res;
 }
 
