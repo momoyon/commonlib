@@ -10,6 +10,8 @@
 #include <assert.h>
 #include <limits.h>
 
+#define COMMONLIB_VERSION "v0.1.13"
+
 #if defined(_WIN32) || defined(_MSC_VER)
 // TODO: Name collisions with raylib
 // NOTE: Don't include unwanted files to speed up compilation
@@ -31,19 +33,17 @@
 #define darr_append c_darr_append
 #define darr_free c_darr_free
 #define darr_shift c_darr_shift
+#define darr_remove c_darr_remove
 #define darr_remove_unordered c_darr_remove_unordered
-#define darr_delete_unordered c_darr_delete_unordered
 #define DYNAMIC_ARRAY_INITIAL_CAPACITY c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 // Deprecated Dynamic-array API
 #define da_append c_da_append
-#define da_delete c_da_delete
 #define da_remove_unorederd c_da_remove_unordered
 // #define c_DYNAMIC_ARRAY_INITIAL_CAPACITY
 #define arr_stack_init c_arr_stack_init
 #define arr_heap_init c_arr_heap_init
 #define arr_append c_arr_append
 #define arr_remove_unordered c_arr_remove_unordered
-#define arr_delete_unordered c_arr_delete_unordered
 #define arr_free   c_arr_free
 
 #define os_get_timedate c_os_get_timedate
@@ -266,46 +266,25 @@ typedef struct c_String_array c_String_array;
 #define c_darr_shift(da) (assert((da).count > 0 && "Array is empty"), (da).count--, *(da).items++)
 #define c_darr_free(da) C_FREE((da).items)
 
-#define c_darr_delete_unordered(da, type, idx) c_darr_delete_unordered_impl(da, type, idx, c_darr_delete_unordered)
-#define c_darr_delete_unordered_impl(da, type, idx, api) do {\
-        if (strcmp(#api, "c_darr_delete_unordered") != 0) {\
-            c_log_warning("%s is deprecated please use the newer api!", #api);\
-        }\
+#define c_darr_remove_unordered(da, idx) do {\
         if ((idx) >= 0 && (idx) <= (da).count-1) {\
-            type temp = (da).items[(idx)];\
             (da).items[(idx)] = (da).items[(da).count-1];\
-            (da).items[--(da).count] = temp;\
+			(da).count--;\
         } else {\
             c_log_error("%s:%d: Trying to remove from outofbounds! %zu != (0 ~ %zu)", __FILE__, __LINE__, (size_t)idx, (size_t)(da).count);\
             exit(1);\
         }\
     } while (0)
 
-#define c_darr_remove_unordered(da, type, elm_ptr, idx) c_darr_remove_unordered_impl(da, type, elm_ptr, idx, c_darr_remove_unordered)
-#define c_darr_remove_unordered_impl(da, type, elm_ptr, idx, api) do {\
-        if (strcmp(#api, "c_darr_remove_unordered") != 0) {\
-            c_log_warning("%s is deprecated please use the newer api!", #api);\
-        }\
+#define c_darr_remove(da, idx) do {\
         if ((idx) >= 0 && (idx) <= (da).count-1) {\
-            type temp = (da).items[(idx)];\
-            (da).items[(idx)] = (da).items[(da).count-1];\
-            (da).items[--(da).count] = temp;\
-            if ((elm_ptr) == NULL) {\
-                c_log_error("%s:%d: You cant pass NULL as the elm_ptr! please use c_darr_delete_unordered to not get the element removed!", __FILE__, __LINE__);\
-                exit(1);\
-            }\
-            type *temp_ptr = elm_ptr; \
-            *temp_ptr = temp; \
+			C_MEMMOVE((da).items + (idx), (da).items + (idx) + 1, ((da).count - (idx) + 1) * sizeof(*(da).items));\
+			(da).count--;\
         } else {\
             c_log_error("%s:%d: Trying to remove from outofbounds! %zu != (0 ~ %zu)", __FILE__, __LINE__, (size_t)idx, (size_t)(da).count);\
             exit(1);\
         }\
     } while (0)
-
-// Deprecated API
-#define c_da_append(da, elm) c_darr_append_impl(da, elm, c_da_append)
-#define c_da_delete_unordered(da, type, idx) c_darr_delete_unordered_impl(da, type, idx, c_da_delete_unordered)
-#define c_da_remove_unordered(da, type, elm_ptr, idx) c_darr_remove_unordered_impl(da, type, elm_ptr, idx, c_da_remove_unordered)
 
 //
 // Static-Array
@@ -368,7 +347,6 @@ typedef struct c_String_array c_String_array;
     } while (0)
 
 #define c_arr_remove_unordered c_darr_remove_unordered
-#define c_arr_delete_unordered c_darr_delete_unordered
 #define c_arr_free c_darr_free
 
 //
@@ -584,8 +562,8 @@ bool c_os_file_exists(cstr filename) {
 }
 
 c_String_array c_os_list_files(cstr dir) {
-    c_Stc_String_array res = {0};
-    ASSERT(false, "UNIMPLEMENTED!");
+    c_String_array res = {0};
+    C_ASSERT(false, "UNIMPLEMENTED!");
     return res;
 }
 
@@ -749,7 +727,7 @@ void* c_arena_alloc(c_Arena* a, size_t size) {
 
             size_t diff = free_block.size - size;
 
-            c_darr_delete_unordered(a->free_blocks, c_Mem_block, i);
+            c_darr_remove_unordered(a->free_blocks, i);
 
             if (diff > 0) {
                 c_Mem_block residue_block = {
@@ -798,7 +776,7 @@ void c_arena_dealloc(c_Arena *a, void *mem) {
 
         if (block.mem == mem) {
             c_darr_append(a->free_blocks, block);
-            c_darr_delete_unordered(a->alloced_blocks, c_Mem_block, i);
+            c_darr_remove_unordered(a->alloced_blocks, i);
             return;
         }
     }
