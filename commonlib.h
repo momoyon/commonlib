@@ -117,6 +117,8 @@
 #define sv_get_part c_sv_get_part
 #define sv_lpop_arg c_sv_lpop_arg
 
+#define str_starts_with c_str_starts_with
+
 #define SET_FLAG C_SET_FLAG
 #define UNSET_FLAG C_UNSET_FLAG
 #define GET_FLAG C_GET_FLAG
@@ -500,6 +502,12 @@ bool c_sv_is_hex_numbers(c_String_view sv);
 bool c_sv_equals(c_String_view sv1, c_String_view sv2);
 c_String_view c_sv_get_part(c_String_view sv, int from, int to);
 bool c_sv_lpop_arg(c_String_view *sv, c_String_view *out);
+
+//
+// String
+//
+
+bool c_str_starts_with(const char *str, const char *suffix);
 
 #endif /* _COMMONLIB_H_ */
 
@@ -1150,6 +1158,20 @@ bool c_sv_lpop_arg(c_String_view *sv, c_String_view *out) {
         sv->count--;
     }
     *out = (c_String_view){ .data = (char*)start_ptr, .count = (size_t)(sv->data - start_ptr) };
+    return true;
+}
+
+//
+// String
+//
+
+bool c_str_starts_with(const char *str, const char *suffix) {
+    if (str == NULL) return false;
+    while (*str != 0 && *suffix != 0) {
+        if (*suffix++ != *str++) {
+            return false;
+        }
+    }
     return true;
 }
 
