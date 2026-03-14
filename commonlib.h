@@ -72,6 +72,11 @@
 #define randomi c_randomi
 #define randomf c_randomf
 #define mapf    c_mapf
+#define ease_in_sine c_ease_in_sine
+#define ease_out_sine c_ease_out_sine
+#define ease_in_out_sine c_ease_in_out_sine
+#define ease_in_bounce c_ease_in_bounce
+#define ease_out_bounce c_ease_out_bounce
 
 #define String_builder c_String_builder
 #define sb_append c_sb_append
@@ -208,6 +213,11 @@ float c_clampf(float v, float min, float max);
 float c_randomf(float from, float to);
 int   c_randomi(int from, int to);
 float c_mapf(float value, float from1, float to1, float from2, float to2);
+float c_ease_in_sine(float t);
+float c_ease_out_sine(float t);
+float c_ease_in_out_sine(float t);
+float c_ease_in_bounce(float t);
+float c_ease_out_bounce(float t);
 
 //
 // Struct pre-decls
@@ -553,6 +563,37 @@ float c_mapf(float value, float from1, float to1, float from2, float to2) {
     value += from2;
 
     return value;
+}
+
+float c_ease_in_sine(float t) {
+	return 1 - cosf((t * C_PI) / 2.f);
+}
+
+float c_ease_out_sine(float t) {
+	return sinf((t * C_PI) / 2);
+}
+
+float c_ease_in_out_sine(float t) {
+	return -(cosf(C_PI * t) - 1) / 2;
+}
+
+float c_ease_out_bounce(float x) {
+	const float n1 = 7.5625;
+	const float d1 = 2.75;
+
+	if (x < 1 / d1) {
+		return n1 * x * x;
+	} else if (x < 2 / d1) {
+		return n1 * (x - 1.5 / d1) * x + 0.75;
+	} else if (x < 2.5 / d1) {
+		return n1 * (x - 2.25 / d1) * x + 0.9375;
+	} else {
+		return n1 * (x - 2.625 / d1) * x + 0.984375;
+	}
+}
+
+float c_ease_in_bounce(float t) {
+	return 1 - c_ease_out_bounce(1 - t);
 }
 
 //
