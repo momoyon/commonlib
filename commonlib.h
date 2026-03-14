@@ -208,6 +208,7 @@ typedef const wchar* wstr;
 //
 // Math
 //
+#define C_PI 3.14159265359
 int   c_clampi(int v, int min, int max);
 float c_clampf(float v, float min, float max);
 float c_randomf(float from, float to);
